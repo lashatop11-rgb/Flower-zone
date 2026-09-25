@@ -1,0 +1,3758 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Цветкарта — карта цветочных точек и баз</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌷</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#F6F4FB;
+    --ink-soft:#ACA8C2;
+    --paper:#000000;
+    --surface:rgba(255,255,255,.055);
+    --line:rgba(255,255,255,.14);
+    --rose:#B478FF;
+    --rose-soft:rgba(180,120,255,.22);
+    --gold:#F0C877;
+    --gold-soft:rgba(240,200,119,.18);
+    --map-bg:#020202;
+    --map-road:rgba(255,255,255,.05);
+    --map-block:rgba(255,255,255,.06);
+    --map-park:rgba(122,230,175,.07);
+    --map-water:rgba(112,172,255,.08);
+    --shadow-ring: 0 0 0 3px rgba(180,120,255,.35);
+    --radius-s:11px;
+    --radius-m:20px;
+    --ease:cubic-bezier(.22,1,.36,1);
+    --ease-spring:cubic-bezier(.34,1.56,.64,1);
+    --glow:0 10px 34px -6px rgba(180,120,255,.55);
+    --surface-glass:rgba(255,255,255,.09);
+    --glass-blur:26px;
+    --glass-hi:rgba(255,255,255,.55);
+    --glass-hi-soft:rgba(255,255,255,.16);
+    --star:#F0C877;
+    --star-off:rgba(255,255,255,.16);
+    --photo-1:rgba(180,120,255,.10);
+    --photo-2:rgba(240,200,119,.09);
+    --photo-3:rgba(255,255,255,.06);
+    font-family:"IBM Plex Sans", system-ui, sans-serif;
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  :root:not([data-theme="light"]){
+    @media (prefers-color-scheme: dark){
+      --ink:#F6F4FB;
+      --ink-soft:#ACA8C2;
+      --paper:#000000;
+      --surface:rgba(255,255,255,.055);
+      --line:rgba(255,255,255,.14);
+      --rose:#B478FF;
+      --rose-soft:rgba(180,120,255,.22);
+      --gold:#F0C877;
+      --gold-soft:rgba(240,200,119,.18);
+      --map-bg:#020202;
+      --map-road:rgba(255,255,255,.05);
+      --map-block:rgba(255,255,255,.06);
+      --map-park:rgba(122,230,175,.07);
+      --map-water:rgba(112,172,255,.08);
+      --star:#F0C877;
+      --star-off:rgba(255,255,255,.16);
+      --photo-1:rgba(180,120,255,.10);
+      --photo-2:rgba(240,200,119,.09);
+      --photo-3:rgba(255,255,255,.06);
+    }
+  }
+  :root[data-theme="dark"]{
+      --ink:#F6F4FB;
+      --ink-soft:#ACA8C2;
+      --paper:#000000;
+      --surface:rgba(255,255,255,.055);
+      --line:rgba(255,255,255,.14);
+      --rose:#B478FF;
+      --rose-soft:rgba(180,120,255,.22);
+      --gold:#F0C877;
+      --gold-soft:rgba(240,200,119,.18);
+      --map-bg:#020202;
+      --map-road:rgba(255,255,255,.05);
+      --map-block:rgba(255,255,255,.06);
+      --map-park:rgba(122,230,175,.07);
+      --map-water:rgba(112,172,255,.08);
+      --star:#F0C877;
+      --star-off:rgba(255,255,255,.16);
+      --photo-1:rgba(180,120,255,.10);
+      --photo-2:rgba(240,200,119,.09);
+      --photo-3:rgba(255,255,255,.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- Liquid background blobs (colour source for the glass to refract) ---------- */
+  .bgBlobs{
+    position:fixed; inset:0; z-index:0;
+    overflow:hidden;
+    pointer-events:none;
+  }
+  .bgBlobs span{
+    position:absolute;
+    border-radius:50%;
+    filter:blur(90px);
+    opacity:.55;
+    will-change:transform;
+  }
+  .bgBlobs span:nth-child(1){
+    width:52vw; height:52vw; max-width:640px; max-height:640px;
+    top:-18%; left:-10%;
+    background:radial-gradient(circle at 35% 35%, #B478FF, transparent 68%);
+    animation:blobDrift1 26s ease-in-out infinite;
+  }
+  .bgBlobs span:nth-child(2){
+    width:44vw; height:44vw; max-width:560px; max-height:560px;
+    bottom:-16%; right:-8%;
+    background:radial-gradient(circle at 60% 40%, #F0C877, transparent 70%);
+    animation:blobDrift2 30s ease-in-out infinite;
+  }
+  .bgBlobs span:nth-child(3){
+    width:34vw; height:34vw; max-width:420px; max-height:420px;
+    top:38%; left:58%;
+    background:radial-gradient(circle at 50% 50%, #6EA8FF, transparent 70%);
+    opacity:.4;
+    animation:blobDrift3 34s ease-in-out infinite;
+  }
+  @keyframes blobDrift1{ 0%,100%{ transform:translate(0,0) scale(1); } 50%{ transform:translate(6%,8%) scale(1.08); } }
+  @keyframes blobDrift2{ 0%,100%{ transform:translate(0,0) scale(1); } 50%{ transform:translate(-7%,-6%) scale(1.1); } }
+  @keyframes blobDrift3{ 0%,100%{ transform:translate(0,0) scale(1); } 50%{ transform:translate(-9%,5%) scale(.94); } }
+  @media (prefers-reduced-motion:reduce){
+    .bgBlobs span{ animation:none !important; }
+  }
+  .app, .authOverlay{ position:relative; z-index:1; }
+
+  /* ================= Auth (liquid glass) ================= */
+  .app{
+    transition:opacity .7s var(--ease), filter .7s var(--ease), transform .7s var(--ease);
+  }
+  .app.app-locked{
+    opacity:0;
+    filter:blur(18px);
+    transform:scale(.97);
+    pointer-events:none;
+  }
+
+  .authOverlay{
+    position:fixed; inset:0; z-index:100;
+    display:flex; align-items:center; justify-content:center;
+    padding:24px;
+    padding-top:calc(24px + env(safe-area-inset-top,0px));
+    padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));
+    transition:opacity .6s var(--ease), filter .6s var(--ease);
+  }
+  .authOverlay.authOverlay-hide{
+    opacity:0;
+    filter:blur(14px);
+    pointer-events:none;
+  }
+  .authOverlay[hidden]{ display:none; }
+
+  .authCard{
+    position:relative;
+    width:100%; max-width:380px;
+    padding:34px 28px 30px;
+    border-radius:28px;
+    background:linear-gradient(160deg, rgba(255,255,255,.16), rgba(255,255,255,.045) 60%, rgba(255,255,255,.02));
+    backdrop-filter:blur(34px) saturate(200%);
+    -webkit-backdrop-filter:blur(34px) saturate(200%);
+    border:1px solid rgba(255,255,255,.22);
+    box-shadow:
+      inset 0 1.5px 0 rgba(255,255,255,.55),
+      inset 0 -24px 40px -30px rgba(255,255,255,.15),
+      0 24px 70px -14px rgba(0,0,0,.7);
+    overflow:hidden;
+    animation:cardIn .55s var(--ease-spring);
+  }
+  .authCard::before{
+    content:"";
+    position:absolute; top:-60%; left:-30%;
+    width:160%; height:120%;
+    background:linear-gradient(115deg, rgba(255,255,255,.22) 0%, rgba(255,255,255,0) 32%);
+    pointer-events:none;
+    transform:rotate(-6deg);
+  }
+  @keyframes cardIn{ from{ opacity:0; transform:translateY(18px) scale(.96); } to{ opacity:1; transform:translateY(0) scale(1); } }
+
+  .authBrand{
+    display:flex; align-items:center; gap:8px;
+    font-family:"Fraunces", serif; font-size:18px; font-weight:600;
+    margin-bottom:22px; position:relative;
+  }
+  .authBrand .mark{ font-size:20px; }
+
+  .authStep{ position:relative; }
+  .authStep h2{ font-size:23px; line-height:1.2; margin-bottom:6px; }
+  .authSub{ font-size:13.5px; color:var(--ink-soft); margin-bottom:22px; line-height:1.4; }
+  .authSub b{ color:var(--ink); font-weight:600; }
+
+  .phoneField{
+    display:flex; align-items:center; gap:8px;
+    padding:13px 16px;
+    border-radius:16px;
+    border:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
+    backdrop-filter:blur(16px) saturate(160%);
+    -webkit-backdrop-filter:blur(16px) saturate(160%);
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft);
+    transition:border-color .2s var(--ease), box-shadow .2s var(--ease);
+    margin-bottom:20px;
+  }
+  .phoneField:focus-within{ border-color:var(--rose); box-shadow:inset 0 1px 0 var(--glass-hi-soft), 0 0 0 4px rgba(180,120,255,.22); }
+  .phoneField .prefix{ font-size:16px; color:var(--ink-soft); font-weight:500; }
+  .phoneField input{
+    flex:1; border:none; background:none; outline:none;
+    font-size:16px; color:var(--ink); font-family:inherit;
+    letter-spacing:.3px;
+  }
+  .phoneField input::placeholder{ color:var(--ink-soft); }
+
+  .authBtn{
+    width:100%;
+    padding:13px;
+    border:none; border-radius:16px;
+    background:linear-gradient(180deg, #C48CFF, var(--rose));
+    color:#fff; font-size:15px; font-weight:600; font-family:inherit;
+    cursor:pointer;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 10px 26px -8px rgba(180,120,255,.55);
+    transition:transform .2s var(--ease), box-shadow .2s var(--ease), filter .2s var(--ease), opacity .2s var(--ease);
+  }
+  .authBtn:hover:not(:disabled){ filter:brightness(1.07); transform:translateY(-1px); }
+  .authBtn:active:not(:disabled){ transform:translateY(0) scale(.98); }
+  .authBtn:disabled{ opacity:.4; cursor:not-allowed; box-shadow:none; filter:none; }
+
+  .authBack{
+    display:block; width:100%; text-align:center;
+    margin-top:14px; padding:6px;
+    background:none; border:none; cursor:pointer;
+    font-size:13px; color:var(--ink-soft); font-family:inherit;
+    transition:color .2s var(--ease);
+  }
+  .authBack:hover{ color:var(--rose); }
+
+  .codeBoxes{ display:flex; gap:8px; margin-bottom:14px; }
+  .codeDigit{
+    width:100%; aspect-ratio:1; text-align:center;
+    font-size:20px; font-weight:600; font-family:inherit; color:var(--ink);
+    border-radius:14px; border:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
+    backdrop-filter:blur(16px) saturate(160%);
+    -webkit-backdrop-filter:blur(16px) saturate(160%);
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft);
+    outline:none;
+    transition:border-color .18s var(--ease), box-shadow .18s var(--ease), transform .18s var(--ease-spring);
+  }
+  .codeDigit:focus{ border-color:var(--rose); box-shadow:inset 0 1px 0 var(--glass-hi-soft), 0 0 0 4px rgba(180,120,255,.22); transform:translateY(-1px); }
+  .codeDigit.filled{ border-color:rgba(180,120,255,.55); }
+
+  .authHint{ font-size:12px; color:var(--ink-soft); margin-bottom:16px; line-height:1.4; }
+  .authError{
+    font-size:12.5px; color:#FF9BAE; margin:-6px 0 16px;
+    padding:8px 11px; border-radius:12px;
+    background:rgba(255,90,110,.14);
+    border:1px solid rgba(255,90,110,.32);
+    backdrop-filter:blur(12px) saturate(160%); -webkit-backdrop-filter:blur(12px) saturate(160%);
+    animation:fadeUp .25s var(--ease);
+  }
+  .codeBoxes.shake{ animation:shakeX .38s var(--ease); }
+  .codeDigit.invalid{ border-color:rgba(255,90,110,.6); box-shadow:inset 0 1px 0 var(--glass-hi-soft), 0 0 0 4px rgba(255,90,110,.18); }
+  @keyframes shakeX{
+    0%,100%{ transform:translateX(0); }
+    20%{ transform:translateX(-8px); }
+    40%{ transform:translateX(7px); }
+    60%{ transform:translateX(-5px); }
+    80%{ transform:translateX(3px); }
+  }
+
+  .authResend{ margin-bottom:16px; }
+  .authResend button{
+    background:none; border:none; cursor:pointer;
+    font-size:12.5px; color:var(--rose); font-family:inherit;
+    transition:color .2s var(--ease);
+  }
+  .authResend button:disabled{ color:var(--ink-soft); cursor:default; }
+
+  /* ---------- loading step ---------- */
+  .authStep-loading{
+    text-align:center;
+    padding:8px 0 2px;
+    animation:fadeUp .35s var(--ease);
+  }
+  .loadingRing{
+    width:52px; height:52px; margin:2px auto 24px;
+    border-radius:50%;
+    background:conic-gradient(from 0deg, rgba(180,120,255,0) 0%, var(--rose) 88%, var(--gold) 100%);
+    -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 5px));
+    mask:radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 5px));
+    animation:ringSpin .85s linear infinite;
+  }
+  @keyframes ringSpin{ to{ transform:rotate(360deg); } }
+  .loadingTitle{ font-size:19px; font-weight:600; margin-bottom:6px; }
+  .loadingSub{ font-size:13px; color:var(--ink-soft); margin-bottom:24px; transition:opacity .2s var(--ease); }
+  .loadingBar{
+    width:100%; height:6px; border-radius:999px; overflow:hidden;
+    background:rgba(255,255,255,.08);
+    border:1px solid var(--line);
+  }
+  .loadingBarFill{
+    height:100%; width:0%; border-radius:999px;
+    background:linear-gradient(90deg, var(--rose), var(--gold));
+    box-shadow:0 0 12px rgba(180,120,255,.55);
+    transition:width 1.5s cubic-bezier(.22,1,.36,1);
+  }
+  @media (prefers-reduced-motion:reduce){
+    .loadingRing{ animation:none; opacity:.65; }
+    .loadingBarFill{ transition-duration:.4s; }
+  }
+
+  @media (max-width:420px){
+    .authCard{ padding:28px 20px 24px; border-radius:24px; }
+  }
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes badgePop{ from{ opacity:0; transform:rotate(45deg) scale(.3); } to{ opacity:1; transform:rotate(45deg) scale(1); } }
+  .app{ animation:fadeUp .4s var(--ease); }
+  h1,h2,h3{font-family:"Fraunces", Georgia, serif; margin:0; font-weight:600;}
+  button{font-family:inherit;}
+  ::selection{background:var(--rose-soft);}
+  :focus-visible{outline:2px solid var(--rose); outline-offset:2px;}
+
+  .app{
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+    min-height:100dvh;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    flex:0 0 auto;
+    position:sticky;
+    top:0;
+    display:flex;
+    align-items:center;
+    gap:20px;
+    padding:14px 22px;
+    padding-top:calc(14px + env(safe-area-inset-top,0px));
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.04));
+    backdrop-filter:blur(var(--glass-blur)) saturate(180%);
+    -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(180%);
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft), 0 1px 0 rgba(0,0,0,.4);
+    z-index:6;
+  }
+  .brand{
+    display:flex; align-items:center; gap:9px;
+    font-family:"Fraunces", serif;
+    font-size:21px;
+    font-weight:600;
+    letter-spacing:.2px;
+    white-space:nowrap;
+  }
+  .brand .mark{
+    font-size:22px;
+    line-height:1;
+  }
+  .searchwrap{ flex:1; max-width:460px; position:relative; }
+  .searchwrap input{
+    width:100%;
+    padding:9px 14px 9px 36px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
+    backdrop-filter:blur(14px) saturate(160%);
+    -webkit-backdrop-filter:blur(14px) saturate(160%);
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft);
+    color:var(--ink);
+    font-size:14.5px;
+    transition:border-color .2s var(--ease), box-shadow .2s var(--ease);
+  }
+  .searchwrap input:focus{ border-color:var(--rose); box-shadow:inset 0 1px 0 var(--glass-hi-soft), 0 0 0 4px rgba(180,120,255,.22); }
+  .searchwrap input::placeholder{ color:var(--ink-soft); }
+  .searchwrap::before{
+    content:"";
+    position:absolute; left:13px; top:50%; transform:translateY(-50%);
+    width:14px; height:14px;
+    border:2px solid var(--ink-soft);
+    border-radius:50%;
+  }
+  .searchwrap::after{
+    content:"";
+    position:absolute; left:23px; top:63%;
+    width:7px; height:2px;
+    background:var(--ink-soft);
+    transform:rotate(45deg);
+  }
+  .topbar-spacer{flex:1;}
+  .btn-become{
+    flex:0 0 auto;
+    border:1px solid rgba(180,120,255,.5);
+    color:var(--rose);
+    background:linear-gradient(180deg, rgba(180,120,255,.16), rgba(180,120,255,.05));
+    backdrop-filter:blur(14px) saturate(160%);
+    -webkit-backdrop-filter:blur(14px) saturate(160%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.28);
+    padding:9px 16px;
+    border-radius:999px;
+    font-size:14px;
+    font-weight:500;
+    cursor:pointer;
+    white-space:nowrap;
+    transition:background .2s var(--ease), transform .2s var(--ease), box-shadow .2s var(--ease);
+  }
+  .btn-become:hover{ background:linear-gradient(180deg, rgba(180,120,255,.26), rgba(180,120,255,.08)); transform:translateY(-1px); box-shadow:inset 0 1px 0 rgba(255,255,255,.28), var(--glow); }
+  .btn-become:active{ transform:translateY(0) scale(.97); }
+
+  /* ---------- Панель администратора ---------- */
+  .adminTools{ display:flex; align-items:center; gap:8px; margin-right:6px; flex:0 0 auto; }
+  .adminTools[hidden]{ display:none; }
+  .adminIconBtn{
+    position:relative;
+    width:38px; height:38px;
+    border-radius:50%;
+    border:1px solid var(--line);
+    background:rgba(255,255,255,.05);
+    backdrop-filter:blur(14px) saturate(160%);
+    -webkit-backdrop-filter:blur(14px) saturate(160%);
+    color:var(--ink);
+    font-size:16px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    transition:border-color .2s var(--ease), background .2s var(--ease), transform .2s var(--ease);
+  }
+  .adminIconBtn:hover{ border-color:var(--rose); transform:translateY(-1px); }
+  .adminIconBtn:active{ transform:translateY(0) scale(.92); }
+  .adminIconBtn-warn.is-active{ border-color:#FF9A5A; background:rgba(255,154,90,.16); color:#FF9A5A; }
+  .adminBadge{
+    position:absolute; top:-4px; right:-4px;
+    min-width:17px; height:17px; padding:0 4px;
+    border-radius:999px;
+    background:linear-gradient(180deg,#C48CFF,var(--rose));
+    color:#fff; font-size:10px; font-weight:700; font-family:"IBM Plex Sans",sans-serif;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 0 0 2px var(--paper);
+  }
+  .adminBadge[hidden]{ display:none; }
+  @media (max-width:880px){
+    .adminIconBtn{ width:34px; height:34px; font-size:14px; }
+  }
+
+  /* ---------- Форма администратора (добавление магазина) ---------- */
+  .adminField{ display:block; margin-bottom:14px; text-align:left; }
+  .adminField > span{ display:block; font-size:12.5px; color:var(--ink-soft); margin-bottom:6px; }
+  .adminField input, .adminField select{
+    width:100%;
+    padding:12px 14px;
+    border-radius:14px;
+    border:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
+    backdrop-filter:blur(16px) saturate(160%);
+    -webkit-backdrop-filter:blur(16px) saturate(160%);
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft);
+    color:var(--ink); font-size:14.5px; font-family:inherit;
+    transition:border-color .2s var(--ease);
+  }
+  .adminField input:focus, .adminField select:focus{ outline:none; border-color:var(--rose); }
+  .adminField input::placeholder{ color:var(--ink-soft); }
+  .adminFieldRow{ display:flex; gap:10px; }
+  .adminFieldRow .adminField{ flex:1; }
+
+  /* ---------- Модерация букетов ---------- */
+  .mod-item{ display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--line); }
+  .mod-photo{ font-size:30px; line-height:1; flex:0 0 auto; }
+  .mod-body{ flex:1; min-width:0; }
+  .mod-shop{ font-size:11.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em; }
+  .mod-name{ font-weight:600; margin:2px 0; }
+  .mod-meta{ font-size:12.5px; color:var(--ink-soft); margin-bottom:9px; }
+  .mod-actions{ display:flex; gap:8px; }
+  .mod-approve, .mod-reject{
+    padding:8px 14px; border-radius:999px; border:1px solid var(--line);
+    font-size:12.5px; font-weight:500; cursor:pointer; font-family:inherit;
+  }
+  .mod-approve{ background:linear-gradient(180deg,#7BE0A0,#4FBF7A); color:#0C2416; border-color:transparent; }
+  .mod-approve:hover{ filter:brightness(1.08); }
+  .mod-reject{ background:rgba(255,255,255,.05); color:var(--ink-soft); }
+  .mod-reject:hover{ border-color:#FF7A7A; color:#FF7A7A; }
+
+  /* ---------- Режим тех. обслуживания ---------- */
+  .app.app-maintenance-blur{ filter:blur(10px); pointer-events:none; user-select:none; }
+  .maintenanceOverlay{
+    position:fixed; inset:0; z-index:400;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,.5);
+    backdrop-filter:blur(4px);
+    padding:24px;
+  }
+  .maintenanceOverlay[hidden]{ display:none; }
+  .maintenanceCard{
+    max-width:420px;
+    padding:38px 32px;
+    border-radius:24px;
+    border:1px solid var(--line);
+    background:linear-gradient(160deg, rgba(28,24,38,.94), rgba(8,7,12,.98));
+    backdrop-filter:blur(30px) saturate(180%);
+    -webkit-backdrop-filter:blur(30px) saturate(180%);
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft), 0 30px 70px -20px rgba(0,0,0,.75);
+    text-align:center;
+  }
+  .maintenanceIcon{ font-size:40px; margin-bottom:14px; }
+  .maintenanceCard h2{ font-family:"Fraunces", serif; font-size:22px; font-weight:600; margin:0 0 10px; color:var(--ink); }
+  .maintenanceCard p{ font-size:14.5px; color:var(--ink-soft); margin:0; line-height:1.5; }
+
+  /* ---------- Layout ---------- */
+  .layout{
+    flex:0 0 auto;
+    display:grid;
+    grid-template-columns:300px 1fr 0px;
+    height:100vh;
+    height:100dvh;
+    height:calc(100dvh - var(--topbar-h, 64px));
+    min-height:0;
+    transition:grid-template-columns .34s var(--ease);
+  }
+  .layout.detail-open{
+    grid-template-columns:300px 1fr 360px;
+  }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    border-right:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.015));
+    backdrop-filter:blur(var(--glass-blur)) saturate(160%);
+    -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(160%);
+    overflow-y:auto;
+    padding:18px 16px 40px;
+  }
+  .sidebar h2{
+    font-size:13.5px;
+    font-family:"IBM Plex Sans", sans-serif;
+    font-weight:600;
+    color:var(--ink-soft);
+    margin-bottom:10px;
+  }
+  fieldset{
+    border:none;
+    padding:0;
+    margin:0 0 16px;
+  }
+  legend{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+    padding:0;
+  }
+  .filters label{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:14px;
+    padding:4px 0;
+    cursor:pointer;
+  }
+  .filters input[type=checkbox]{
+    width:16px; height:16px;
+    accent-color:var(--rose);
+  }
+  select{
+    width:100%;
+    padding:8px 10px;
+    border-radius:var(--radius-s);
+    border:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
+    backdrop-filter:blur(12px) saturate(160%);
+    -webkit-backdrop-filter:blur(12px) saturate(160%);
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft);
+    color:var(--ink);
+    font-size:14px;
+  }
+  .switch{ display:flex; align-items:center; gap:9px; cursor:pointer; font-size:14px; }
+  .switch input{ position:absolute; opacity:0; width:0;height:0; }
+  .switch span{
+    position:relative;
+    width:34px; height:19px;
+    background:var(--line);
+    border-radius:999px;
+    transition:background .15s;
+    flex:0 0 auto;
+  }
+  .switch span::after{
+    content:"";
+    position:absolute; top:2px; left:2px;
+    width:15px; height:15px;
+    background:var(--surface);
+    border-radius:50%;
+    transition:transform .2s var(--ease-spring);
+  }
+  .switch span{ transition:background .2s var(--ease); }
+  .switch input:checked + span{ background:var(--rose); }
+  .switch input:checked + span::after{ transform:translateX(15px); }
+
+  .pointlist h2{ display:flex; align-items:baseline; gap:6px; }
+  .pointlist .count{ font-weight:400; color:var(--ink-soft); }
+  .plist{ display:flex; flex-direction:column; gap:1px; border-top:1px solid var(--line); }
+  .pcard{
+    display:block;
+    width:100%;
+    text-align:left;
+    background:none;
+    border:none;
+    border-bottom:1px solid var(--line);
+    padding:11px 4px 11px 10px;
+    border-left:2px solid transparent;
+    cursor:pointer;
+    color:inherit;
+    transition:background .2s var(--ease), border-left-color .2s var(--ease), padding-left .2s var(--ease);
+  }
+  .pcard:hover{ background:rgba(255,255,255,.045); padding-left:14px; }
+  .pcard.active{ background:var(--rose-soft); border-left-color:var(--rose); }
+  .pcard-top{ display:flex; align-items:center; gap:7px; }
+  .pcard-dot{ width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
+  .pcard-dot.retail{ background:var(--rose); }
+  .pcard-dot.wholesale{ background:var(--gold); }
+  .pcard-name{ font-size:14.5px; font-weight:500; }
+  .pcard-meta{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; padding-left:15px; }
+  .pcard-empty{ padding:20px 4px; font-size:13.5px; color:var(--ink-soft); }
+
+  /* ---------- Map ---------- */
+  .mapwrap{
+    position:relative;
+    overflow:hidden;
+    background:var(--map-bg);
+    perspective:1300px;
+    cursor:grab;
+    touch-action:none;
+  }
+  .mapwrap.dragging{ cursor:grabbing; }
+  .scene3d{
+    position:absolute; inset:0;
+    transform-style:preserve-3d;
+    transform-origin:50% 38%;
+    transform:rotateX(var(--tilt,55deg)) rotateZ(var(--spin,0deg)) scale(var(--zoom,1));
+    transition:transform .28s var(--ease), opacity .4s var(--ease);
+  }
+  .scene3d.notransition{ transition:none; }
+  .mapsvg{ position:absolute; inset:0; width:100%; height:100%; }
+
+  .buildingsLayer{ position:absolute; inset:0; transform-style:preserve-3d; }
+  .building{ position:absolute; transform-style:preserve-3d; }
+  .b-slice{ position:absolute; inset:0; }
+  .b-slice.top{ box-shadow:0 1px 0 rgba(255,255,255,.12) inset; }
+
+  .zoomctrls{
+    position:absolute; right:16px; bottom:16px;
+    display:flex; flex-direction:column;
+    background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
+    backdrop-filter:blur(var(--glass-blur)) saturate(180%);
+    -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(180%);
+    border:1px solid var(--line);
+    border-radius:var(--radius-m);
+    overflow:hidden;
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft), 0 8px 24px -8px rgba(0,0,0,.55);
+    z-index:3;
+  }
+  .zoomctrls button{
+    width:36px; height:36px;
+    border:none; background:none;
+    color:var(--ink); font-size:17px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:background .2s var(--ease), color .2s var(--ease);
+  }
+  .zoomctrls button:hover{ background:var(--rose-soft); color:var(--rose); }
+  .zoomctrls button:active{ transform:scale(.9); }
+  .zoomctrls button + button{ border-top:1px solid var(--line); }
+  .resetview{
+    position:absolute; right:16px; bottom:126px;
+    background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
+    backdrop-filter:blur(var(--glass-blur)) saturate(180%);
+    -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(180%);
+    border:1px solid var(--line);
+    border-radius:var(--radius-m);
+    padding:8px 11px;
+    font-size:12px;
+    color:var(--ink-soft);
+    cursor:pointer;
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft), 0 8px 24px -8px rgba(0,0,0,.55);
+    transition:color .2s var(--ease), border-color .2s var(--ease), transform .2s var(--ease);
+    z-index:3;
+  }
+  .resetview:hover{ color:var(--rose); border-color:var(--rose); transform:translateY(-1px); }
+  .resetview:active{ transform:translateY(0) scale(.97); }
+  .maphint{
+    position:absolute; left:16px; top:14px;
+    background:linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.03));
+    backdrop-filter:blur(16px) saturate(180%);
+    -webkit-backdrop-filter:blur(16px) saturate(180%);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:6px 12px;
+    font-size:11.5px;
+    color:var(--ink-soft);
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft);
+    z-index:3;
+  }
+
+  .maplegend{
+    position:absolute;
+    left:16px; bottom:16px;
+    background:linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.03));
+    backdrop-filter:blur(var(--glass-blur)) saturate(180%);
+    -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(180%);
+    border:1px solid var(--line);
+    border-radius:var(--radius-m);
+    padding:10px 13px;
+    font-size:12.5px;
+    display:flex;
+    gap:16px;
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft), 0 8px 24px -8px rgba(0,0,0,.5);
+    z-index:3;
+  }
+  .maplegend div{ display:flex; align-items:center; gap:6px; }
+  .legend-dot{ width:9px; height:9px; border-radius:50%; }
+  .legend-dot.retail{ background:var(--rose); }
+  .legend-dot.wholesale{ background:var(--gold); }
+
+  .mapbanner{
+    position:absolute; top:14px; left:50%; transform:translateX(-50%);
+    max-width:min(520px, 86%);
+    background:linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.03));
+    backdrop-filter:blur(var(--glass-blur)) saturate(180%);
+    -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(180%);
+    border:1px solid var(--line);
+    border-radius:var(--radius-m);
+    padding:9px 14px;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    text-align:center;
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft), 0 4px 14px rgba(0,0,0,.35);
+    z-index:3;
+  }
+  .mapbanner a{ color:var(--rose); }
+
+  /* ---------- Tabs (glass segmented control) ---------- */
+  .tabs{
+    display:flex; gap:2px; margin-bottom:16px;
+    padding:4px;
+    border-radius:999px;
+    background:rgba(255,255,255,.045);
+    backdrop-filter:blur(16px) saturate(160%);
+    -webkit-backdrop-filter:blur(16px) saturate(160%);
+    border:1px solid var(--line);
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft);
+  }
+  .tab{
+    flex:1;
+    background:none; border:none; cursor:pointer;
+    border-radius:999px;
+    padding:7px 4px;
+    font-size:13px; color:var(--ink-soft);
+    font-family:inherit;
+    transition:color .2s var(--ease), background .2s var(--ease), box-shadow .2s var(--ease);
+  }
+  .tab:hover{ color:var(--ink); }
+  .tab.active{
+    color:var(--ink); font-weight:500;
+    background:linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.09));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 2px 10px rgba(0,0,0,.35);
+  }
+  .tabpanel{ display:none; }
+  .tabpanel.active{ display:block; animation:fadeUp .28s var(--ease); }
+
+  /* ---------- Photos ---------- */
+  .gallery{ display:grid; grid-template-columns:1.4fr 1fr; grid-template-rows:1fr 1fr; gap:5px; height:150px; border-radius:var(--radius-m); overflow:hidden; margin-bottom:16px; }
+  .gallery .ph{ position:relative; display:flex; align-items:flex-end; overflow:hidden; }
+  .gallery .ph::before{
+    content:""; position:absolute; inset:0;
+    transition:transform .5s var(--ease);
+  }
+  .gallery .ph:hover::before{ transform:scale(1.08); }
+  .gallery .ph:first-child{ grid-row:1 / 3; }
+  .gallery .ph span{
+    position:relative;
+    font-size:11px; color:rgba(255,255,255,.92);
+    padding:6px 8px;
+    background:linear-gradient(to top, rgba(0,0,0,.38), transparent);
+    width:100%;
+  }
+  .gallery .ph.p1::before{ background:var(--photo-1); }
+  .gallery .ph.p2::before{ background:var(--photo-2); }
+  .gallery .ph.p3::before{ background:var(--photo-3); }
+
+  /* ---------- Quick actions ---------- */
+  .quickactions{ display:flex; gap:8px; margin:14px 0 18px; }
+  .btn-call, .btn-chat{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:7px;
+    padding:10px; border-radius:var(--radius-s); font-size:13.5px; font-weight:500; cursor:pointer;
+    border:none; text-decoration:none;
+    transition:transform .2s var(--ease), box-shadow .2s var(--ease), border-color .2s var(--ease), filter .2s var(--ease);
+  }
+  .btn-call{ background:linear-gradient(180deg, #C48CFF, var(--rose)); color:#fff; box-shadow:inset 0 1px 0 rgba(255,255,255,.45); }
+  .btn-call:hover{ filter:brightness(1.08); transform:translateY(-1px); box-shadow:inset 0 1px 0 rgba(255,255,255,.45), var(--glow); }
+  .btn-call:active{ transform:translateY(0) scale(.97); }
+  .btn-chat{
+    background:linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
+    backdrop-filter:blur(14px) saturate(160%); -webkit-backdrop-filter:blur(14px) saturate(160%);
+    color:var(--ink); border:1px solid var(--line); box-shadow:inset 0 1px 0 var(--glass-hi-soft);
+  }
+  .btn-chat:hover{ border-color:var(--rose); transform:translateY(-1px); }
+  .btn-chat:active{ transform:translateY(0) scale(.97); }
+
+  /* ---------- Rating / stars ---------- */
+  .rating-summary{ display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+  .rating-num{ font-family:"Fraunces", serif; font-size:34px; font-weight:600; line-height:1; }
+  .rating-side{ font-size:12.5px; color:var(--ink-soft); }
+  .stars{ display:inline-flex; gap:1px; }
+  .stars svg{ width:14px; height:14px; }
+  .rating-side .stars svg{ width:15px; height:15px; }
+  .star-fill{ fill:var(--star); }
+  .star-off{ fill:var(--star-off); }
+
+  .review{ padding:12px 0; border-bottom:1px solid var(--line); }
+  .review:last-child{ border-bottom:none; }
+  .review-top{ display:flex; align-items:center; gap:9px; margin-bottom:5px; }
+  .avatar{
+    width:28px; height:28px; border-radius:50%;
+    background:var(--rose-soft); color:var(--rose);
+    display:flex; align-items:center; justify-content:center;
+    font-size:11.5px; font-weight:600; flex:0 0 auto;
+  }
+  .review-name{ font-size:13.5px; font-weight:500; }
+  .review-date{ font-size:11.5px; color:var(--ink-soft); margin-left:auto; white-space:nowrap; }
+  .review-text{ font-size:13.5px; line-height:1.45; padding-left:37px; }
+  .review.mine .avatar{ background:var(--gold-soft); color:var(--gold); }
+
+  .addreview{ margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
+  .addreview h5{ font-family:"Fraunces", serif; font-size:15px; font-weight:600; margin-bottom:9px; }
+  .starpicker{ display:inline-flex; gap:4px; margin-bottom:10px; }
+  .starpicker button{
+    background:none; border:none; cursor:pointer; padding:2px;
+  }
+  .starpicker svg{ width:22px; height:22px; }
+  .addreview textarea{
+    width:100%; min-height:64px; resize:vertical;
+    padding:9px 11px; border-radius:var(--radius-s); border:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
+    backdrop-filter:blur(14px) saturate(160%); -webkit-backdrop-filter:blur(14px) saturate(160%);
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft);
+    color:var(--ink); font-size:13.5px; font-family:inherit;
+    margin-bottom:9px;
+  }
+  .btn-submit-review{
+    padding:9px 16px; border-radius:999px; border:none;
+    background:linear-gradient(180deg, #fff, var(--ink)); color:var(--paper); font-size:13.5px; font-weight:500; cursor:pointer;
+    box-shadow:inset 0 1px 0 #fff;
+    transition:transform .2s var(--ease), box-shadow .2s var(--ease);
+  }
+  .btn-submit-review:hover{ transform:translateY(-1px); box-shadow:inset 0 1px 0 #fff, var(--glow); }
+  .btn-submit-review:active{ transform:translateY(0) scale(.97); }
+  .review-thanks{ font-size:13px; color:#6FE0A0; margin-top:8px; display:none; }
+  .review-thanks.show{ display:block; animation:fadeUp .3s var(--ease); }
+
+  .pins{ position:absolute; inset:0; transform-style:preserve-3d; }
+  .pin{
+    position:absolute;
+    transform-style:preserve-3d;
+    transform:translateZ(30px) rotateZ(calc(-1 * var(--spin,0deg))) rotateX(calc(-1 * var(--tilt,55deg))) translate(-50%,-100%);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    background:none;
+    border:none;
+    cursor:pointer;
+    padding:0;
+    animation:badgeAppear .35s var(--ease-spring) backwards;
+  }
+  @keyframes badgeAppear{ from{ opacity:0; } to{ opacity:1; } }
+  .pin-badge{
+    width:30px; height:30px;
+    border-radius:50% 50% 50% 4px;
+    transform:rotate(45deg);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 3px 10px rgba(0,0,0,.4);
+    border:2px solid var(--surface);
+    transition:box-shadow .2s var(--ease), transform .2s var(--ease-spring);
+  }
+  .pin-badge span{ transform:rotate(-45deg); font-size:14px; }
+  .pin.retail .pin-badge{ background:var(--rose); }
+  .pin.wholesale .pin-badge{ background:var(--gold); }
+  .pin:hover .pin-badge{ box-shadow:0 0 0 6px rgba(168,92,249,.28); transform:rotate(45deg) scale(1.12); }
+  .pin.active .pin-badge{ box-shadow:0 0 0 6px rgba(168,92,249,.4); }
+  .pin.hidden{ display:none; }
+  .pin.pin-new .pin-badge{ animation: pinNewPulse 1.4s ease-in-out 3; }
+  @keyframes pinNewPulse{
+    0%, 100%{ box-shadow:0 3px 10px rgba(0,0,0,.4), 0 0 0 0 rgba(180,120,255,.65); }
+    50%{ box-shadow:0 3px 10px rgba(0,0,0,.4), 0 0 0 14px rgba(180,120,255,0); }
+  }
+  .pin-label{
+    margin-top:3px;
+    font-size:11px;
+    background:rgba(0,0,0,.55);
+    backdrop-filter:blur(10px) saturate(160%);
+    -webkit-backdrop-filter:blur(10px) saturate(160%);
+    padding:2px 6px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    white-space:nowrap;
+    opacity:0;
+    transform:translateY(-2px);
+    pointer-events:none;
+    transition:opacity .18s var(--ease), transform .18s var(--ease);
+  }
+  .pin:hover .pin-label{ opacity:1; transform:translateY(0); }
+
+  /* ---------- Detail panel ---------- */
+  .detail{
+    border-left:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.015));
+    backdrop-filter:blur(var(--glass-blur)) saturate(160%);
+    -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(160%);
+    overflow-y:auto;
+    overflow-x:hidden;
+    width:0;
+    opacity:0;
+    transition:opacity .32s var(--ease);
+  }
+  .layout.detail-open .detail{ width:360px; opacity:1; }
+  .detail-close{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    width:100%;
+    text-align:left;
+    padding:14px 20px;
+    padding-top:calc(14px + env(safe-area-inset-top,0px));
+    position:sticky;
+    top:0;
+    z-index:2;
+    background:rgba(0,0,0,.35);
+    backdrop-filter:blur(18px) saturate(160%);
+    -webkit-backdrop-filter:blur(18px) saturate(160%);
+    border:none;
+    border-bottom:1px solid var(--line);
+    color:var(--ink-soft);
+    font-size:13.5px;
+    cursor:pointer;
+  }
+  .detail-close{ transition:color .2s var(--ease); }
+  .detail-close:hover{ color:var(--rose); }
+  .detail-close .x{
+    width:20px; height:20px; border-radius:50%;
+    border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; line-height:1; flex:0 0 auto;
+  }
+  .detail-close:hover .x{ border-color:var(--rose); color:var(--rose); }
+  .detail-inner{ padding:16px 20px 60px; min-width:320px; }
+  .detail-kicker{ display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--ink-soft); margin-bottom:4px; }
+  .detail-kicker .dot{ width:8px; height:8px; border-radius:50%; }
+  .detail-kicker .dot.retail{ background:var(--rose); }
+  .detail-kicker .dot.wholesale{ background:var(--gold); }
+  .detail h3{ font-size:22px; margin-bottom:6px; line-height:1.15; }
+  .detail-addr{ font-size:14px; color:var(--ink-soft); margin-bottom:2px; }
+  .detail-hours{ font-size:13.5px; margin-bottom:14px; }
+  .detail-hours .open{ color:#6FE0A0; font-weight:500; }
+  .detail-hours .closed{ color:var(--rose); font-weight:500; }
+  .detail-delivery{
+    font-size:13px;
+    color:var(--ink-soft);
+    background:var(--gold-soft);
+    border-radius:var(--radius-s);
+    padding:7px 10px;
+    margin-bottom:18px;
+  }
+
+  .section-title{
+    font-size:12.5px;
+    text-transform:none;
+    color:var(--ink-soft);
+    margin:20px 0 8px;
+    padding-top:14px;
+    border-top:1px solid var(--line);
+  }
+  .section-title:first-of-type{ margin-top:0; }
+
+  table.pricelist{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  table.pricelist th{
+    text-align:left;
+    font-weight:500;
+    color:var(--ink-soft);
+    font-size:11.5px;
+    padding-bottom:6px;
+    border-bottom:1px solid var(--line);
+  }
+  table.pricelist td{ padding:7px 0; border-bottom:1px solid var(--line); vertical-align:top; }
+  table.pricelist td.price{ text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  table.pricelist tr:last-child td{ border-bottom:none; }
+  .stock{ font-size:11px; color:var(--ink-soft); }
+  .stock.low{ color:var(--gold); }
+
+  .order-row{ display:flex; gap:8px; margin-top:14px; }
+  .order-row select{ flex:1; transition:border-color .2s var(--ease); }
+  .qty{
+    display:flex; align-items:center; border:1px solid var(--line); border-radius:var(--radius-s); overflow:hidden;
+    backdrop-filter:blur(14px) saturate(160%); -webkit-backdrop-filter:blur(14px) saturate(160%);
+  }
+  .qty button{ width:28px; height:34px; border:none; background:rgba(255,255,255,.05); cursor:pointer; font-size:15px; color:var(--ink); transition:background .2s var(--ease), color .2s var(--ease); }
+  .qty button:hover{ background:var(--rose-soft); color:var(--rose); }
+  .qty input{ width:34px; text-align:center; border:none; background:rgba(255,255,255,.03); color:var(--ink); font-size:13.5px; }
+  .btn-add{
+    margin-top:8px; width:100%;
+    padding:9px; border-radius:var(--radius-s); border:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+    backdrop-filter:blur(14px) saturate(160%); -webkit-backdrop-filter:blur(14px) saturate(160%);
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft);
+    color:var(--ink); font-size:13.5px; cursor:pointer;
+    transition:border-color .2s var(--ease), transform .2s var(--ease);
+  }
+  .btn-add:hover{ border-color:var(--rose); transform:translateY(-1px); }
+  .btn-add:active{ transform:translateY(0) scale(.98); }
+
+  .cart{ margin-top:12px; font-size:13.5px; }
+  .cart-item{ display:flex; justify-content:space-between; padding:5px 0; animation:fadeUp .25s var(--ease); }
+  .cart-total{ display:flex; justify-content:space-between; font-weight:600; padding-top:7px; border-top:1px solid var(--line); margin-top:5px; }
+  .btn-order{
+    margin-top:14px; width:100%;
+    padding:11px; border-radius:999px; border:none;
+    background:linear-gradient(180deg, #C48CFF, var(--rose)); color:#fff; font-size:14.5px; font-weight:500; cursor:pointer;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.45);
+    transition:transform .2s var(--ease), box-shadow .2s var(--ease), filter .2s var(--ease);
+    animation:fadeUp .25s var(--ease);
+  }
+  .btn-order:hover{ filter:brightness(1.08); transform:translateY(-1px); box-shadow:inset 0 1px 0 rgba(255,255,255,.45), var(--glow); }
+  .btn-order:active{ transform:translateY(0) scale(.98); }
+  .order-confirm{
+    margin-top:12px; font-size:13.5px; color:#6FE0A0;
+    background:rgba(111,224,160,.12);
+    border:1px solid rgba(111,224,160,.28);
+    backdrop-filter:blur(12px) saturate(160%); -webkit-backdrop-filter:blur(12px) saturate(160%);
+    padding:9px 11px; border-radius:var(--radius-s);
+    display:none;
+  }
+  .order-confirm.show{ display:block; animation:fadeUp .3s var(--ease); }
+
+  .chat{ display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto; padding:4px 2px 8px; }
+  .msg{ max-width:82%; padding:7px 10px; border-radius:10px; font-size:13.5px; line-height:1.35; animation:fadeUp .25s var(--ease); }
+  .msg.them{
+    background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+    backdrop-filter:blur(12px) saturate(160%); -webkit-backdrop-filter:blur(12px) saturate(160%);
+    border:1px solid var(--line); align-self:flex-start; border-bottom-left-radius:2px;
+  }
+  .msg.me{
+    background:linear-gradient(180deg, rgba(180,120,255,.32), rgba(180,120,255,.16));
+    backdrop-filter:blur(12px) saturate(160%); -webkit-backdrop-filter:blur(12px) saturate(160%);
+    border:1px solid rgba(180,120,255,.35);
+    align-self:flex-end; border-bottom-right-radius:2px;
+  }
+  .chat-input{ display:flex; gap:7px; margin-top:8px; }
+  .chat-input input{
+    flex:1; padding:9px 11px; border-radius:999px; border:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
+    backdrop-filter:blur(12px) saturate(160%); -webkit-backdrop-filter:blur(12px) saturate(160%);
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft);
+    color:var(--ink); font-size:13.5px;
+  }
+  .chat-input button{
+    border:none; background:linear-gradient(180deg, #fff, var(--ink)); color:var(--paper);
+    box-shadow:inset 0 1px 0 #fff;
+    width:36px; height:36px; border-radius:50%; cursor:pointer; font-size:14px;
+    transition:transform .2s var(--ease);
+  }
+  .chat-input button:hover{ transform:translateY(-1px); }
+
+  /* ---------- Mobile ---------- */
+  /* ---------- Ready-made bouquets ---------- */
+  .bouquets{
+    flex:0 0 auto;
+    padding:56px clamp(20px,4vw,48px) 90px;
+    position:relative;
+  }
+  .bouquets-head{ max-width:1400px; margin:0 auto 28px; }
+  .bouquets-head h2{ font-family:"Fraunces", serif; font-size:26px; font-weight:600; }
+  .bouquets-head p{ margin-top:6px; font-size:13.5px; color:var(--ink-soft); max-width:560px; line-height:1.5; }
+
+  .bouquetsGrid{
+    max-width:1400px; margin:0 auto;
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
+    gap:18px;
+  }
+
+  .bqcard{
+    text-align:left; cursor:pointer;
+    display:flex; flex-direction:column;
+    border-radius:var(--radius-m);
+    border:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.015));
+    backdrop-filter:blur(20px) saturate(160%);
+    -webkit-backdrop-filter:blur(20px) saturate(160%);
+    overflow:hidden;
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft), 0 10px 30px -16px rgba(0,0,0,.65);
+    transition:transform .25s var(--ease), border-color .25s var(--ease), box-shadow .25s var(--ease);
+  }
+  .bqcard:hover{ transform:translateY(-4px); border-color:rgba(180,120,255,.42); box-shadow:inset 0 1px 0 var(--glass-hi-soft), var(--glow); }
+  .bqcard:focus-visible{ outline:2px solid var(--rose); outline-offset:2px; }
+
+  .bq-photo{
+    height:136px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:50px;
+    background:linear-gradient(135deg, var(--photo-1), var(--photo-2));
+    border-bottom:1px solid var(--line);
+  }
+  .bq-body{ padding:14px 16px 16px; display:flex; flex-direction:column; gap:3px; flex:1; }
+  .bq-shop{ font-size:11.5px; color:var(--ink-soft); }
+  .bq-name{ font-size:15.5px; font-weight:600; line-height:1.3; }
+  .bq-size{ font-size:12px; color:var(--ink-soft); margin-top:1px; }
+  .bq-price{ margin-top:8px; font-size:17px; font-weight:600; }
+
+  .btn-bq-add{
+    margin-top:11px; width:100%;
+    padding:9px; border-radius:999px; border:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
+    backdrop-filter:blur(14px) saturate(160%); -webkit-backdrop-filter:blur(14px) saturate(160%);
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft);
+    color:var(--ink); font-size:13px; font-weight:500; font-family:inherit; cursor:pointer;
+    transition:border-color .2s var(--ease), background .2s var(--ease), color .2s var(--ease), transform .2s var(--ease);
+  }
+  .btn-bq-add:hover{ border-color:var(--rose); transform:translateY(-1px); }
+  .btn-bq-add:active{ transform:translateY(0) scale(.97); }
+  .btn-bq-add.added{
+    background:linear-gradient(180deg, rgba(111,224,160,.28), rgba(111,224,160,.12));
+    border-color:rgba(111,224,160,.5); color:#6FE0A0;
+  }
+
+  /* bouquet detail (right panel) */
+  .bq-hero-photo{
+    height:168px; border-radius:var(--radius-m); margin-bottom:16px;
+    display:flex; align-items:center; justify-content:center; font-size:68px;
+    background:linear-gradient(135deg, var(--photo-1), var(--photo-2));
+    border:1px solid var(--line);
+  }
+  .bq-detail-price{ font-size:22px; font-weight:600; margin:2px 0 16px; }
+  .bq-composition{ list-style:none; margin:10px 0 18px; padding:0; }
+  .bq-composition li{
+    display:flex; justify-content:space-between; gap:10px;
+    padding:9px 0; border-top:1px solid var(--line);
+    font-size:13.5px;
+  }
+  .bq-composition li:last-child{ border-bottom:1px solid var(--line); }
+  .bq-composition li span:last-child{ color:var(--ink-soft); white-space:nowrap; }
+
+  @media (max-width: 880px){
+    .bouquets{ padding:40px 18px 70px; }
+    .bouquetsGrid{ grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px; }
+    .bq-photo{ height:104px; font-size:38px; }
+  }
+
+  @media (max-width: 880px){
+    .layout{ grid-template-columns:1fr; grid-template-rows:auto 1fr; }
+    .layout.detail-open{ grid-template-columns:1fr; }
+    .sidebar{
+      border-right:none; border-bottom:1px solid var(--line);
+      max-height:38vh;
+    }
+    .mapwrap{ min-height:280px; }
+    .detail{
+      position:fixed; inset:0; z-index:20;
+      width:auto; max-width:none;
+      transform:translateY(100%);
+      transition:transform .25s ease;
+    }
+    .layout.detail-open .detail{ transform:translateY(0); }
+    .brand span.full{ display:none; }
+  }
+
+  /* ================= Анимация нажатия для всех кнопок ================= */
+  button:not(:disabled){
+    -webkit-tap-highlight-color:transparent;
+    transition:transform .16s var(--ease-spring), filter .16s var(--ease), box-shadow .16s var(--ease), background .16s var(--ease), border-color .16s var(--ease);
+  }
+  button:not(:disabled):active{ transform:scale(.94); }
+
+  /* ================= Плавающие кнопки: поддержка + корзина ================= */
+  .fabStack{
+    position:fixed;
+    right:calc(18px + env(safe-area-inset-right,0px));
+    bottom:calc(18px + env(safe-area-inset-bottom,0px));
+    z-index:70;
+    display:flex; flex-direction:column; gap:12px; align-items:flex-end;
+  }
+  .fabBtn{
+    position:relative;
+    width:54px; height:54px;
+    border-radius:50%;
+    border:1px solid var(--line);
+    background:linear-gradient(160deg, rgba(255,255,255,.16), rgba(255,255,255,.04));
+    backdrop-filter:blur(22px) saturate(180%);
+    -webkit-backdrop-filter:blur(22px) saturate(180%);
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft), 0 14px 34px -12px rgba(0,0,0,.65);
+    color:var(--ink);
+    font-size:21px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  .fabBtn:hover{ border-color:var(--rose); transform:translateY(-2px); box-shadow:inset 0 1px 0 var(--glass-hi-soft), var(--glow); }
+  .fabBtn:active{ transform:translateY(0) scale(.88); }
+  .fabBadge{
+    position:absolute; top:-3px; right:-3px;
+    min-width:19px; height:19px; padding:0 5px;
+    border-radius:999px;
+    background:linear-gradient(180deg,#C48CFF,var(--rose));
+    color:#fff; font-size:10.5px; font-weight:700; font-family:"IBM Plex Sans",sans-serif;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 0 0 2px var(--paper);
+    animation:fadeUp .25s var(--ease);
+  }
+  .fabBadge[hidden]{ display:none; }
+  @media (max-width:880px){
+    .fabStack{ right:14px; bottom:calc(14px + env(safe-area-inset-bottom,0px)); gap:10px; }
+    .fabBtn{ width:50px; height:50px; font-size:19px; }
+  }
+
+  /* ================= Шторки: корзина / поддержка ================= */
+  .sheetOverlay{
+    position:fixed; inset:0; z-index:150;
+    display:flex; align-items:flex-end; justify-content:center;
+    background:rgba(0,0,0,.55);
+    backdrop-filter:blur(8px);
+    opacity:0; pointer-events:none;
+    transition:opacity .3s var(--ease);
+  }
+  .sheetOverlay.show{ opacity:1; pointer-events:auto; }
+  .sheetPanel{
+    width:100%; max-width:460px;
+    max-height:min(640px, 86vh);
+    display:flex; flex-direction:column;
+    background:linear-gradient(165deg, rgba(28,24,38,.92), rgba(8,7,12,.97));
+    backdrop-filter:blur(32px) saturate(180%);
+    -webkit-backdrop-filter:blur(32px) saturate(180%);
+    border:1px solid var(--line);
+    border-bottom:none;
+    border-radius:26px 26px 0 0;
+    box-shadow:inset 0 1px 0 var(--glass-hi-soft), 0 -26px 70px -20px rgba(0,0,0,.75);
+    padding:18px 20px calc(18px + env(safe-area-inset-bottom,0px));
+    transform:translateY(30px);
+    transition:transform .38s var(--ease-spring);
+    overflow:hidden;
+  }
+  .sheetOverlay.show .sheetPanel{ transform:translateY(0); }
+  .sheetHandle{ width:36px; height:4px; border-radius:999px; background:var(--line); margin:0 auto 14px; }
+  .sheetHead{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .sheetHead h3{ font-family:"Fraunces", serif; font-size:19px; font-weight:600; }
+  .sheetClose{
+    width:32px; height:32px; border-radius:50%; border:1px solid var(--line);
+    background:rgba(255,255,255,.05); color:var(--ink); font-size:16px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; flex:0 0 auto;
+  }
+  .sheetClose:hover{ border-color:var(--rose); color:var(--rose); }
+  .sheetBody{ overflow-y:auto; flex:1; margin:0 -4px; padding:0 4px; }
+  @media (min-width:640px){
+    .sheetOverlay{ align-items:center; padding:24px; }
+    .sheetPanel{ border-radius:26px; border-bottom:1px solid var(--line); }
+  }
+
+  /* Корзина */
+  .cart-empty{ font-size:13.5px; color:var(--ink-soft); padding:18px 0 6px; line-height:1.5; }
+  .cart-group{ margin-bottom:14px; }
+  .cart-group-title{ font-size:12px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; }
+  .cart-item-global{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:9px 0; border-bottom:1px solid var(--line); font-size:13.5px;
+  }
+  .cart-item-info{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .cart-item-name{ font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:190px; }
+  .cart-item-price{ font-size:12px; color:var(--ink-soft); }
+  .cart-item-controls{ display:flex; align-items:center; gap:6px; flex:0 0 auto; }
+  .cart-qty-btn{
+    width:26px; height:26px; border-radius:50%; border:1px solid var(--line);
+    background:rgba(255,255,255,.05); color:var(--ink); font-size:14px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .cart-qty-btn:hover{ border-color:var(--rose); color:var(--rose); }
+  .cart-qty-val{ min-width:16px; text-align:center; font-size:13px; }
+  .cart-remove-btn{
+    width:26px; height:26px; border-radius:50%; border:1px solid transparent;
+    background:none; color:var(--ink-soft); font-size:13px; cursor:pointer; margin-left:2px;
+  }
+  .cart-remove-btn:hover{ color:#FF7A7A; }
+  .sheetFooter{ margin-top:6px; padding-top:12px; border-top:1px solid var(--line); }
+  .sheetFooter[hidden]{ display:none; }
+  .cart-grand-total{ display:flex; justify-content:space-between; font-size:15px; font-weight:600; margin-bottom:12px; }
+  .btn-checkout{
+    width:100%; padding:13px; border-radius:999px; border:none;
+    background:linear-gradient(180deg, #C48CFF, var(--rose)); color:#fff; font-size:14.5px; font-weight:500; cursor:pointer;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.45);
+  }
+  .btn-checkout:hover{ filter:brightness(1.08); }
+  .sheet-confirm{
+    margin-top:10px; font-size:13px; color:#6FE0A0;
+    background:rgba(111,224,160,.12); border:1px solid rgba(111,224,160,.28);
+    padding:9px 11px; border-radius:var(--radius-s); display:none; text-align:center;
+  }
+  .sheet-confirm.show{ display:block; animation:fadeUp .3s var(--ease); }
+
+  /* Поддержка — использует те же .chat/.chat-input/.msg стили */
+  #supportSheet .sheetBody{ display:flex; flex-direction:column; }
+  #supportChatBox{ max-height:none; flex:1; }
+
+  /* ================= Плавающие цветы (общий фон для приветствия и загрузки) ================= */
+  .floatFlowers{
+    position:fixed; inset:0; z-index:0;
+    overflow:hidden;
+    pointer-events:none;
+  }
+  .floatFlowers span{
+    position:absolute;
+    font-size:clamp(20px, 3.6vw, 38px);
+    opacity:.5;
+    filter:drop-shadow(0 8px 16px rgba(0,0,0,.4));
+    animation:floatFlower 9s ease-in-out infinite;
+    will-change:transform;
+  }
+  @keyframes floatFlower{
+    0%,100%{ transform:translateY(0) rotate(0deg); }
+    50%{ transform:translateY(-24px) rotate(9deg); }
+  }
+  @media (prefers-reduced-motion:reduce){
+    .floatFlowers span{ animation:none !important; }
+  }
+
+  /* ================= Экран приветствия ================= */
+  .welcomeOverlay, .daisyOverlay{
+    position:fixed; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:24px;
+    padding-top:calc(24px + env(safe-area-inset-top,0px));
+    padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));
+    background:radial-gradient(ellipse at 50% 28%, rgba(40,22,58,.35), rgba(0,0,0,.82) 72%);
+    text-align:center;
+    transition:opacity .5s var(--ease), filter .5s var(--ease);
+  }
+  .welcomeOverlay{ z-index:300; }
+  .daisyOverlay{ z-index:310; }
+  .welcomeOverlay[hidden], .daisyOverlay[hidden]{ display:none; }
+  .welcomeOverlay.welcomeOverlay-hide, .daisyOverlay.daisyOverlay-hide{
+    opacity:0; filter:blur(14px); pointer-events:none;
+  }
+
+  .welcomeContent{ position:relative; z-index:1; max-width:640px; animation:cardIn .6s var(--ease-spring); }
+  .welcomeTitle{ font-family:"Fraunces", serif; font-weight:700; font-size:clamp(32px, 7vw, 60px); line-height:1.18; color:#fff; margin:0; }
+  .welcomeTitle span{ display:block; }
+  .welcomeTitle span:first-child{
+    text-shadow:0 0 10px rgba(255,255,255,.85), 0 0 26px rgba(180,120,255,.85), 0 0 54px rgba(180,120,255,.5);
+    animation:neonFlicker 2.8s infinite;
+  }
+  .welcomeTitle span:last-child{
+    color:var(--gold);
+    text-shadow:0 0 10px rgba(240,200,119,.9), 0 0 26px rgba(240,200,119,.7), 0 0 54px rgba(240,200,119,.4);
+    animation:neonFlicker 2.8s infinite .15s;
+  }
+  @keyframes neonFlicker{
+    0%, 16%, 20%, 58%, 63%, 100%{ opacity:1; }
+    18%, 60%{ opacity:.32; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    .welcomeTitle span, .welcomeContent{ animation:none !important; }
+  }
+
+  .welcomeQuote{
+    position:absolute;
+    top:calc(9% + env(safe-area-inset-top,0px));
+    left:50%; transform:translateX(-50%);
+    z-index:1;
+    max-width:620px;
+    margin:0;
+    padding:0 26px;
+    text-align:center;
+    font-family:"Fraunces", serif;
+    font-style:italic;
+    font-weight:500;
+    font-size:clamp(17px, 3vw, 23px);
+    line-height:1.55;
+    color:var(--ink-soft);
+    text-shadow:0 2px 12px rgba(0,0,0,.5);
+    opacity:1;
+    transition:opacity .6s var(--ease);
+  }
+  .welcomeQuote.fade{ opacity:0; }
+  @media (max-width:600px){
+    .welcomeQuote{ top:calc(6.5% + env(safe-area-inset-top,0px)); font-size:16px; padding:0 20px; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    .welcomeQuote{ transition:none; }
+  }
+
+  /* Тот же неоновый стиль текста для остальных надписей на главном экране */
+  .glowText{
+    font-family:"Fraunces", serif;
+    font-weight:600;
+    color:#fff;
+    text-shadow:0 0 8px rgba(255,255,255,.85), 0 0 20px rgba(180,120,255,.75), 0 0 42px rgba(180,120,255,.45);
+    animation:neonFlicker 2.8s infinite .3s;
+  }
+  .glowText-rose{
+    text-shadow:0 0 8px rgba(255,255,255,.85), 0 0 20px rgba(180,120,255,.85), 0 0 42px rgba(180,120,255,.5);
+    animation-delay:.5s;
+  }
+  .glowText-white{
+    text-shadow:0 0 8px rgba(255,255,255,.9), 0 0 20px rgba(255,255,255,.55), 0 0 42px rgba(255,255,255,.3);
+  }
+  .glowText-gold{
+    color:var(--gold);
+    text-shadow:0 0 8px rgba(240,200,119,.9), 0 0 20px rgba(240,200,119,.7), 0 0 42px rgba(240,200,119,.4);
+    animation-delay:.7s;
+  }
+  @media (prefers-reduced-motion:reduce){
+    .glowText{ animation:none !important; }
+  }
+
+  .roseSpin{
+    position:absolute;
+    top:50%; left:50%;
+    width:min(540px, 92vw); height:min(540px, 92vw);
+    transform:translate(-50%,-50%);
+    z-index:0;
+    opacity:.22;
+    pointer-events:none;
+  }
+  .roseSpin svg{ width:100%; height:100%; display:block; overflow:visible; }
+  .roseGroup{
+    transform-box:view-box;
+    transform-origin:100px 100px;
+    animation:roseSpin 36s linear infinite;
+  }
+  @keyframes roseSpin{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
+  .rosePetal{ fill:var(--rose); }
+  .roseBudCenter{ fill:var(--gold); }
+  @media (prefers-reduced-motion:reduce){
+    .roseGroup{ animation:none !important; }
+  }
+
+  .welcomeActions{
+    position:relative;
+    z-index:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:18px;
+    margin-top:36px;
+  }
+  .welcomeActionsRow{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:16px;
+    margin-top:2px;
+  }
+
+  .btnGoSite{
+    padding:18px 42px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:rgba(255,255,255,.09);
+    backdrop-filter:blur(18px) saturate(160%);
+    -webkit-backdrop-filter:blur(18px) saturate(160%);
+    font-size:18px; font-weight:600; letter-spacing:.01em; font-family:inherit;
+    cursor:pointer;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.4), 0 16px 40px -14px rgba(0,0,0,.65);
+  }
+  .btnGoSite:hover{ border-color:var(--rose); transform:translateY(-2px); }
+  .btnGoSite:active{ transform:translateY(0) scale(.94); }
+
+  .btnLoginShop, .btnLoginDev{
+    padding:11px 22px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:rgba(255,255,255,.06);
+    backdrop-filter:blur(16px) saturate(160%);
+    -webkit-backdrop-filter:blur(16px) saturate(160%);
+    font-size:13px; font-weight:500; font-family:inherit;
+    cursor:pointer;
+    transition:border-color .2s var(--ease), transform .2s var(--ease);
+  }
+  .btnLoginShop:hover{ border-color:var(--rose); }
+  .btnLoginDev:hover{ border-color:var(--gold); }
+  .btnLoginShop:active, .btnLoginDev:active{ transform:scale(.94); }
+
+  @media (max-width:600px){
+    .btnGoSite{ padding:15px 32px; font-size:16px; }
+    .welcomeActionsRow{ gap:10px; }
+    .btnLoginShop, .btnLoginDev{ padding:9px 15px; font-size:11.5px; }
+  }
+
+  /* ================= Экран загрузки: ромашка теряет лепестки ================= */
+  .daisyWrap{ position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:22px; }
+  .daisySvg{ width:min(210px, 48vw); height:min(210px, 48vw); overflow:visible; }
+  .petal{
+    fill:#fff;
+    transform-box:view-box;
+    transform-origin:100px 100px;
+    transform:rotate(var(--angle));
+    transition:transform .7s cubic-bezier(.55,0,.2,1), opacity .55s ease;
+    filter:drop-shadow(0 3px 6px rgba(0,0,0,.35));
+  }
+  .petal.is-falling{
+    transform:rotate(calc(var(--angle) + 65deg)) translate(0, 150px);
+    opacity:0;
+  }
+  @media (prefers-reduced-motion:reduce){
+    .petal{ transition:none; }
+  }
+  .daisyCenter{
+    fill:#F5CB1E;
+    transform-box:view-box; transform-origin:100px 100px;
+    animation:daisyPulse 1.15s ease-in-out infinite;
+  }
+  @keyframes daisyPulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.07); } }
+  @media (prefers-reduced-motion:reduce){
+    .daisyCenter{ animation:none !important; }
+  }
+  .daisyLabel{ font-size:14px; color:var(--ink-soft); letter-spacing:.02em; }
+</style>
+</head>
+<body>
+
+<div class="bgBlobs" aria-hidden="true"><span></span><span></span><span></span></div>
+
+<div class="floatFlowers" aria-hidden="true">
+  <span style="top:6%;left:8%;animation-duration:8s;animation-delay:0s;">🌸</span>
+  <span style="top:10%;left:86%;animation-duration:10s;animation-delay:.6s;">🌺</span>
+  <span style="top:80%;left:10%;animation-duration:9s;animation-delay:1.2s;">🌼</span>
+  <span style="top:84%;left:84%;animation-duration:11s;animation-delay:.3s;">🌷</span>
+  <span style="top:38%;left:4%;animation-duration:12s;animation-delay:1.6s;">🌻</span>
+  <span style="top:42%;left:94%;animation-duration:8.5s;animation-delay:.9s;">🌹</span>
+  <span style="top:16%;left:46%;animation-duration:9.5s;animation-delay:1.9s;">🌷</span>
+  <span style="top:90%;left:50%;animation-duration:10.5s;animation-delay:.4s;">🌸</span>
+  <span style="top:60%;left:18%;animation-duration:9s;animation-delay:1.1s;">🌼</span>
+  <span style="top:64%;left:80%;animation-duration:11.5s;animation-delay:.8s;">🌺</span>
+</div>
+
+<div class="welcomeOverlay" id="welcomeOverlay">
+  <p class="welcomeQuote" id="welcomeQuote">«Дарите чувства — мы позаботимся о цветах.»</p>
+
+  <div class="roseSpin" aria-hidden="true">
+    <svg viewBox="0 0 200 200">
+      <g class="roseGroup">
+        <path class="rosePetal" d="M100,100 C68,92 52,62 68,28 C84,52 96,76 100,100 Z" transform="rotate(0 100 100)"/>
+        <path class="rosePetal" d="M100,100 C68,92 52,62 68,28 C84,52 96,76 100,100 Z" transform="rotate(51.4 100 100)"/>
+        <path class="rosePetal" d="M100,100 C68,92 52,62 68,28 C84,52 96,76 100,100 Z" transform="rotate(102.8 100 100)"/>
+        <path class="rosePetal" d="M100,100 C68,92 52,62 68,28 C84,52 96,76 100,100 Z" transform="rotate(154.2 100 100)"/>
+        <path class="rosePetal" d="M100,100 C68,92 52,62 68,28 C84,52 96,76 100,100 Z" transform="rotate(205.6 100 100)"/>
+        <path class="rosePetal" d="M100,100 C68,92 52,62 68,28 C84,52 96,76 100,100 Z" transform="rotate(257 100 100)"/>
+        <path class="rosePetal" d="M100,100 C68,92 52,62 68,28 C84,52 96,76 100,100 Z" transform="rotate(308.4 100 100)"/>
+        <circle class="roseBudCenter" cx="100" cy="100" r="14"/>
+      </g>
+    </svg>
+  </div>
+
+  <div class="welcomeContent">
+    <h1 class="welcomeTitle"><span>Приветствуем!</span><span>Цветочков?</span></h1>
+
+    <div class="welcomeActions">
+      <button type="button" class="btnGoSite" id="btnGoSite"><span class="glowText glowText-white">Перейти на сайт</span></button>
+      <div class="welcomeActionsRow">
+        <button type="button" class="btnLoginDev" id="btnLoginDev"><span class="glowText glowText-gold">Войти как разработчик</span></button>
+        <button type="button" class="btnLoginShop" id="btnLoginShop"><span class="glowText glowText-rose">Войти как магазин</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="daisyOverlay" id="daisyOverlay" hidden>
+  <div class="daisyWrap">
+    <svg class="daisySvg" id="daisySvg" viewBox="0 0 200 200" aria-hidden="true">
+      <ellipse class="petal" style="--angle:0deg"   cx="100" cy="58" rx="20" ry="38"/>
+      <ellipse class="petal" style="--angle:45deg"  cx="100" cy="58" rx="20" ry="38"/>
+      <ellipse class="petal" style="--angle:90deg"  cx="100" cy="58" rx="20" ry="38"/>
+      <ellipse class="petal" style="--angle:135deg" cx="100" cy="58" rx="20" ry="38"/>
+      <ellipse class="petal" style="--angle:180deg" cx="100" cy="58" rx="20" ry="38"/>
+      <ellipse class="petal" style="--angle:225deg" cx="100" cy="58" rx="20" ry="38"/>
+      <ellipse class="petal" style="--angle:270deg" cx="100" cy="58" rx="20" ry="38"/>
+      <ellipse class="petal" style="--angle:315deg" cx="100" cy="58" rx="20" ry="38"/>
+      <circle class="daisyCenter" cx="100" cy="100" r="29"/>
+    </svg>
+    <p class="daisyLabel" id="daisyLabel">Загрузка сайта… 0%</p>
+  </div>
+</div>
+
+<div class="authOverlay" id="authOverlay" hidden>
+  <div class="authCard" id="authCard">
+
+    <div class="authBrand"><span class="mark">🌿</span>Цветкарта</div>
+
+    <div class="authStep" id="stepPhone">
+      <h2>Вход по номеру телефона</h2>
+      <p class="authSub">Отправим одноразовый код подтверждения в SMS</p>
+      <label class="phoneField">
+        <span class="prefix">+7</span>
+        <input id="phoneInput" type="tel" inputmode="numeric" autocomplete="tel" placeholder="(999) 123-45-67">
+      </label>
+      <button class="authBtn" id="btnSendCode" type="button" disabled>Получить код</button>
+    </div>
+
+    <div class="authStep" id="stepCode" hidden>
+      <h2>Введите код</h2>
+      <p class="authSub">Код отправлен на&nbsp;<b id="codePhoneEcho"></b></p>
+      <div class="codeBoxes" id="codeBoxes">
+        <input class="codeDigit" inputmode="numeric" maxlength="1" autocomplete="one-time-code">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+      </div>
+      <p class="authHint">Бета-версия: код подтверждения — 171171</p>
+      <p class="authError" id="authError" hidden>Неверный код. Попробуйте ещё раз.</p>
+      <div class="authResend"><button id="btnResend" type="button" disabled>Отправить код повторно через <span id="resendTimer">60</span>с</button></div>
+      <button class="authBtn" id="btnVerify" type="button" disabled>Подтвердить</button>
+      <button class="authBack" id="btnBackToPhone" type="button">Изменить номер</button>
+    </div>
+
+    <div class="authStep" id="stepBizName" hidden>
+      <h2>Вход для магазина</h2>
+      <p class="authSub">Укажите название вашего магазина — по нему вас увидят клиенты на карте</p>
+      <label class="phoneField">
+        <span class="prefix">🏪</span>
+        <input id="bizNameInput" type="text" autocomplete="organization" placeholder="Например, «Флорибус»">
+      </label>
+      <button class="authBtn" id="btnBizNameNext" type="button" disabled>Продолжить</button>
+      <button class="authBack" id="btnBizNameBack" type="button">‹ Назад</button>
+    </div>
+
+    <div class="authStep" id="stepBizCode" hidden>
+      <h2>Секретный код</h2>
+      <p class="authSub">Введите 6-значный код доступа для&nbsp;<b id="bizNameEcho"></b></p>
+      <div class="codeBoxes" id="bizCodeBoxes">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+      </div>
+      <p class="authHint">Бета-версия: секретный код — 555555</p>
+      <p class="authError" id="bizAuthError" hidden>Неверный код. Попробуйте ещё раз.</p>
+      <button class="authBtn" id="btnBizVerify" type="button" disabled>Войти</button>
+      <button class="authBack" id="btnBizCodeBack" type="button">Изменить название</button>
+    </div>
+
+    <div class="authStep" id="stepDevPhone" hidden>
+      <h2>Вход для разработчика</h2>
+      <p class="authSub">Отправим одноразовый код подтверждения в SMS</p>
+      <label class="phoneField">
+        <span class="prefix">+7</span>
+        <input id="devPhoneInput" type="tel" inputmode="numeric" autocomplete="tel" placeholder="(999) 123-45-67">
+      </label>
+      <button class="authBtn" id="btnDevSendCode" type="button" disabled>Получить код</button>
+      <button class="authBack" id="btnDevPhoneBack" type="button">‹ Назад</button>
+    </div>
+
+    <div class="authStep" id="stepDevCode" hidden>
+      <h2>Введите код</h2>
+      <p class="authSub">Код отправлен на&nbsp;<b id="devCodePhoneEcho"></b></p>
+      <div class="codeBoxes" id="devCodeBoxes">
+        <input class="codeDigit" inputmode="numeric" maxlength="1" autocomplete="one-time-code">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+      </div>
+      <p class="authHint">Бета-версия: код подтверждения — 666666</p>
+      <p class="authError" id="devAuthError" hidden>Неверный код. Попробуйте ещё раз.</p>
+      <button class="authBtn" id="btnDevVerify" type="button" disabled>Подтвердить</button>
+      <button class="authBack" id="btnDevCodeBack" type="button">Изменить номер</button>
+    </div>
+
+    <div class="authStep" id="stepDevSecret" hidden>
+      <h2>Секретный код разработчика</h2>
+      <p class="authSub">Введите 6-значный код доступа разработчика</p>
+      <div class="codeBoxes" id="devSecretBoxes">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+        <input class="codeDigit" inputmode="numeric" maxlength="1">
+      </div>
+      <p class="authHint">Бета-версия: секретный код — 777777</p>
+      <p class="authError" id="devSecretError" hidden>Неверный код. Попробуйте ещё раз.</p>
+      <button class="authBtn" id="btnDevSecretVerify" type="button" disabled>Войти</button>
+      <button class="authBack" id="btnDevSecretBack" type="button">Назад</button>
+    </div>
+
+    <div class="authStep authStep-loading" id="stepLoading" hidden>
+      <div class="loadingRing" aria-hidden="true"></div>
+      <p class="loadingTitle">Готовим приложение</p>
+      <p class="loadingSub" id="loadingSub">Загружаем базы и точки продаж…</p>
+      <div class="loadingBar"><div class="loadingBarFill" id="loadingBarFill"></div></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="app app-locked" id="appRoot">
+
+  <header class="topbar">
+    <div class="brand"><span class="mark">🌿</span><span class="full">Цветкарта</span></div>
+    <div class="searchwrap"><input id="searchInput" type="text" placeholder="Найти базу или цветок, например «пион»"></div>
+    <div class="topbar-spacer"></div>
+    <div class="adminTools" id="adminTools" hidden>
+      <button type="button" class="adminIconBtn" id="btnAddShop" title="Добавить магазин" aria-label="Добавить магазин">＋</button>
+      <button type="button" class="adminIconBtn" id="btnModeration" title="Модерация букетов" aria-label="Модерация букетов">📋<span class="adminBadge" id="moderationBadge" hidden>0</span></button>
+      <button type="button" class="adminIconBtn adminIconBtn-warn" id="btnMaintenance" title="Тех. обслуживание" aria-label="Тех. обслуживание">🛠️</button>
+    </div>
+    <button class="btn-become">Разместить точку на карте</button>
+  </header>
+
+  <div class="layout" id="layout">
+
+    <aside class="sidebar">
+      <section class="filters">
+        <h2>Фильтры</h2>
+        <fieldset>
+          <legend>Тип точки</legend>
+          <label><input type="checkbox" checked data-type="retail"> Розничный магазин</label>
+          <label><input type="checkbox" checked data-type="wholesale"> Оптовая база</label>
+        </fieldset>
+        <fieldset>
+          <legend>Наличие</legend>
+          <select id="flowerFilter">
+            <option value="">Любой цветок</option>
+            <option>Роза</option>
+            <option>Тюльпан</option>
+            <option>Пион</option>
+            <option>Эустома</option>
+            <option>Гипсофила</option>
+            <option>Хризантема</option>
+            <option>Гвоздика</option>
+            <option>Альстромерия</option>
+            <option>Ранункулюс</option>
+            <option>Лилия</option>
+            <option>Ирис</option>
+            <option>Гортензия</option>
+            <option>Каллы</option>
+            <option>Гиацинт</option>
+          </select>
+        </fieldset>
+        <fieldset>
+          <label class="switch"><input type="checkbox" id="openNowToggle"><span></span>Только открытые сейчас</label>
+        </fieldset>
+      </section>
+
+      <section class="pointlist">
+        <h2>Точки на карте <span class="count" id="pointCount"></span></h2>
+        <div class="plist" id="pointListEl"></div>
+      </section>
+    </aside>
+
+    <main class="mapwrap" id="mapWrap">
+      <div id="yandexMap" style="position:absolute;inset:0;display:none;opacity:0;transition:opacity .4s cubic-bezier(.22,1,.36,1);"></div>
+      <div class="scene3d" id="scene3d">
+        <svg class="mapsvg" id="mapSvg" viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <rect x="0" y="0" width="1000" height="700" fill="var(--map-bg)"/>
+          <path d="M -20 520 C 220 470, 430 560, 640 500 S 900 430 1020 470 L 1020 700 L -20 700 Z" fill="var(--map-water)"/>
+          <polygon points="60,60 230,40 260,190 90,210" fill="var(--map-park)"/>
+          <polygon points="700,470 860,450 880,600 720,610" fill="var(--map-park)"/>
+          <g fill="var(--map-block)" opacity="0.55">
+            <rect x="300" y="70" width="150" height="110"/>
+            <rect x="480" y="60" width="120" height="150"/>
+            <rect x="640" y="90" width="160" height="110"/>
+            <rect x="90" y="260" width="160" height="120"/>
+            <rect x="300" y="250" width="140" height="150"/>
+            <rect x="480" y="250" width="130" height="90"/>
+            <rect x="650" y="260" width="140" height="140"/>
+            <rect x="130" y="420" width="150" height="120"/>
+            <rect x="330" y="400" width="120" height="150"/>
+            <rect x="500" y="410" width="150" height="90"/>
+          </g>
+          <g stroke="var(--map-road)" stroke-width="14" fill="none">
+            <path d="M 0 210 H 1000"/>
+            <path d="M 0 400 H 1000"/>
+            <path d="M 0 580 H 1000"/>
+            <path d="M 270 0 V 700"/>
+            <path d="M 470 0 V 700"/>
+            <path d="M 630 0 V 700"/>
+            <path d="M 820 0 V 700"/>
+          </g>
+        </svg>
+        <div class="buildingsLayer" id="buildingsLayer"></div>
+        <div class="pins" id="pinsLayer"></div>
+      </div>
+      <div class="maphint">Тяните карту для поворота · колесо мыши — зум</div>
+      <div class="mapbanner" id="mapBanner">Ключ Яндекс.Карт уже встроен в код. Здесь, в превью чата, карта не грузится — песочница блокирует внешние скрипты. Откройте файл на своём хостинге или локально, и заработает настоящая карта.</div>
+      <button class="resetview" id="resetView" type="button">Сбросить вид</button>
+      <div class="zoomctrls">
+        <button id="zoomIn" type="button" aria-label="Приблизить">+</button>
+        <button id="zoomOut" type="button" aria-label="Отдалить">–</button>
+      </div>
+      <div class="maplegend">
+        <div><span class="legend-dot retail"></span>Розница</div>
+        <div><span class="legend-dot wholesale"></span>Опт</div>
+      </div>
+    </main>
+
+    <aside class="detail" id="detailPanel">
+      <button class="detail-close" id="detailClose"><span class="x">×</span>Выйти с карточки</button>
+      <div class="detail-inner" id="detailInner"></div>
+    </aside>
+
+  </div>
+
+  <section class="bouquets" id="bouquets">
+    <div class="bouquets-head">
+      <h2>Готовые букеты в наличии</h2>
+      <p>Собранные композиции от продавцов на карте — можно заказать сразу, без подбора цветов поштучно</p>
+    </div>
+    <div class="bouquetsGrid" id="bouquetsGrid"></div>
+  </section>
+
+  <!-- Плавающие кнопки: поддержка и корзина -->
+  <div class="fabStack">
+    <button type="button" class="fabBtn" id="fabCart" aria-label="Корзина">
+      🛒
+      <span class="fabBadge" id="cartBadge" hidden>0</span>
+    </button>
+    <button type="button" class="fabBtn" id="fabSupport" aria-label="Поддержка">💬</button>
+  </div>
+
+  <!-- Корзина: все товары, добавленные в корзину -->
+  <div class="sheetOverlay" id="cartSheet">
+    <div class="sheetPanel" role="dialog" aria-modal="true" aria-label="Корзина">
+      <div class="sheetHandle"></div>
+      <div class="sheetHead">
+        <h3>Корзина</h3>
+        <button type="button" class="sheetClose" id="cartSheetClose" aria-label="Закрыть">✕</button>
+      </div>
+      <div class="sheetBody" id="globalCartList"></div>
+      <div class="sheetFooter" id="globalCartFooter" hidden>
+        <div class="cart-grand-total"><span>Итого</span><span id="globalCartTotal">0 ₽</span></div>
+        <button type="button" class="btn-checkout" id="globalCartCheckout">Оформить заказ</button>
+        <div class="sheet-confirm" id="globalCartConfirm">Заказ оформлен! Продавцы свяжутся с вами по каждой точке.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Поддержка: отдельный раздел чата -->
+  <div class="sheetOverlay" id="supportSheet">
+    <div class="sheetPanel" role="dialog" aria-modal="true" aria-label="Поддержка">
+      <div class="sheetHandle"></div>
+      <div class="sheetHead">
+        <h3>Поддержка</h3>
+        <button type="button" class="sheetClose" id="supportSheetClose" aria-label="Закрыть">✕</button>
+      </div>
+      <div class="sheetBody">
+        <div class="chat" id="supportChatBox"></div>
+      </div>
+      <div class="chat-input">
+        <input id="supportChatInput" type="text" placeholder="Опишите ваш вопрос...">
+        <button type="button" id="supportChatSend" aria-label="Отправить">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Администратор: добавление магазина -->
+  <div class="sheetOverlay" id="addShopSheet">
+    <div class="sheetPanel" role="dialog" aria-modal="true" aria-label="Добавить магазин">
+      <div class="sheetHandle"></div>
+      <div class="sheetHead">
+        <h3>Новый магазин</h3>
+        <button type="button" class="sheetClose" id="addShopClose" aria-label="Закрыть">✕</button>
+      </div>
+      <div class="sheetBody">
+        <label class="adminField">
+          <span>Название</span>
+          <input id="newShopName" type="text" placeholder="«Название магазина»">
+        </label>
+        <label class="adminField">
+          <span>Тип точки</span>
+          <select id="newShopType">
+            <option value="retail">Розничный магазин</option>
+            <option value="wholesale">Оптовая база</option>
+          </select>
+        </label>
+        <label class="adminField">
+          <span>Адрес</span>
+          <input id="newShopAddress" type="text" placeholder="ул. Примерная, 1">
+        </label>
+        <label class="adminField">
+          <span>Телефон</span>
+          <input id="newShopPhone" type="tel" placeholder="+7 495 000-00-00">
+        </label>
+        <div class="adminFieldRow">
+          <label class="adminField">
+            <span>Открытие</span>
+            <input id="newShopFrom" type="number" min="0" max="23" value="9">
+          </label>
+          <label class="adminField">
+            <span>Закрытие</span>
+            <input id="newShopTo" type="number" min="0" max="23" value="21">
+          </label>
+        </div>
+        <p class="authError" id="addShopError" hidden>Укажите название и адрес магазина.</p>
+      </div>
+      <div class="sheetFooter">
+        <button type="button" class="btn-checkout" id="btnAddShopSubmit">Добавить на карту</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Администратор: модерация готовых букетов -->
+  <div class="sheetOverlay" id="moderationSheet">
+    <div class="sheetPanel" role="dialog" aria-modal="true" aria-label="Модерация букетов">
+      <div class="sheetHandle"></div>
+      <div class="sheetHead">
+        <h3>Модерация букетов</h3>
+        <button type="button" class="sheetClose" id="moderationClose" aria-label="Закрыть">✕</button>
+      </div>
+      <div class="sheetBody" id="moderationList"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="maintenanceOverlay" id="maintenanceOverlay" hidden>
+  <div class="maintenanceCard">
+    <div class="maintenanceIcon">🛠️</div>
+    <h2>Сайт на тех. обслуживании</h2>
+    <p>Попробуйте зайти позднее</p>
+  </div>
+</div>
+
+<script>
+/* ================= Auth flow (demo, no backend) ================= */
+(function(){
+  const overlay = document.getElementById('authOverlay');
+  const card = document.getElementById('authCard');
+  const appRoot = document.getElementById('appRoot');
+
+  const stepPhone = document.getElementById('stepPhone');
+  const stepCode = document.getElementById('stepCode');
+  const phoneInput = document.getElementById('phoneInput');
+  const btnSendCode = document.getElementById('btnSendCode');
+  const codePhoneEcho = document.getElementById('codePhoneEcho');
+  const codeBoxesWrap = document.getElementById('codeBoxes');
+  const codeBoxes = [...codeBoxesWrap.querySelectorAll('.codeDigit')];
+  const btnVerify = document.getElementById('btnVerify');
+  const btnBackToPhone = document.getElementById('btnBackToPhone');
+  const btnResend = document.getElementById('btnResend');
+  const resendTimerEl = document.getElementById('resendTimer');
+  const authError = document.getElementById('authError');
+  const stepLoading = document.getElementById('stepLoading');
+  const loadingBarFill = document.getElementById('loadingBarFill');
+  const loadingSub = document.getElementById('loadingSub');
+
+  const CORRECT_CODE = '171171';
+
+  function formatPhone(d){
+    // d: up to 10 digits after the +7
+    let out = '';
+    if(d.length > 0) out += '(' + d.slice(0,3);
+    if(d.length >= 3) out += ') ' + d.slice(3,6);
+    if(d.length >= 6) out += '-' + d.slice(6,8);
+    if(d.length >= 8) out += '-' + d.slice(8,10);
+    return out;
+  }
+
+  phoneInput.addEventListener('input', ()=>{
+    let digits = phoneInput.value.replace(/\D/g,'');
+    if(digits[0]==='7' || digits[0]==='8') digits = digits.slice(1);
+    digits = digits.slice(0,10);
+    phoneInput.value = formatPhone(digits);
+    phoneInput.dataset.digits = digits;
+    btnSendCode.disabled = digits.length !== 10;
+  });
+
+  let resendInterval = null;
+  function startResendTimer(){
+    let t = 60;
+    resendTimerEl.textContent = t;
+    btnResend.disabled = true;
+    clearInterval(resendInterval);
+    resendInterval = setInterval(()=>{
+      t -= 1;
+      if(t <= 0){
+        clearInterval(resendInterval);
+        btnResend.innerHTML = 'Отправить код повторно';
+        btnResend.disabled = false;
+      } else {
+        resendTimerEl.textContent = t;
+      }
+    }, 1000);
+  }
+
+  function hideError(){
+    authError.hidden = true;
+    codeBoxes.forEach(b=> b.classList.remove('invalid'));
+  }
+
+  function goToCodeStep(){
+    const digits = phoneInput.dataset.digits || '';
+    codePhoneEcho.textContent = '+7 ' + formatPhone(digits);
+    stepPhone.hidden = true;
+    stepCode.hidden = false;
+    codeBoxes.forEach(b=>{ b.value=''; b.classList.remove('filled'); });
+    hideError();
+    updateVerifyState();
+    startResendTimer();
+    btnResend.innerHTML = 'Отправить код повторно через <span id="resendTimer">60</span>с';
+    setTimeout(()=> codeBoxes[0].focus(), 260);
+  }
+
+  btnSendCode.addEventListener('click', ()=>{
+    if(btnSendCode.disabled) return;
+    goToCodeStep();
+  });
+
+  btnBackToPhone.addEventListener('click', ()=>{
+    clearInterval(resendInterval);
+    stepCode.hidden = true;
+    stepPhone.hidden = false;
+    setTimeout(()=> phoneInput.focus(), 200);
+  });
+
+  btnResend.addEventListener('click', ()=>{
+    if(btnResend.disabled) return;
+    codeBoxes.forEach(b=>{ b.value=''; b.classList.remove('filled'); });
+    hideError();
+    updateVerifyState();
+    codeBoxes[0].focus();
+    startResendTimer();
+  });
+
+  function updateVerifyState(){
+    const filled = codeBoxes.every(b => /^\d$/.test(b.value));
+    btnVerify.disabled = !filled;
+    return filled;
+  }
+
+  codeBoxes.forEach((box, i)=>{
+    box.addEventListener('input', ()=>{
+      box.value = box.value.replace(/\D/g,'').slice(0,1);
+      box.classList.toggle('filled', box.value !== '');
+      hideError();
+      if(box.value && i < codeBoxes.length-1){
+        codeBoxes[i+1].focus();
+      }
+      if(updateVerifyState()){
+        setTimeout(verify, 200);
+      }
+    });
+    box.addEventListener('keydown', (e)=>{
+      if(e.key === 'Backspace' && !box.value && i > 0){
+        codeBoxes[i-1].focus();
+      }
+    });
+    box.addEventListener('paste', (e)=>{
+      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'');
+      if(!text) return;
+      e.preventDefault();
+      hideError();
+      text.slice(0,6).split('').forEach((ch, idx)=>{
+        if(codeBoxes[idx]){ codeBoxes[idx].value = ch; codeBoxes[idx].classList.add('filled'); }
+      });
+      const next = Math.min(text.length, codeBoxes.length) - 1;
+      if(codeBoxes[next]) codeBoxes[next].focus();
+      if(updateVerifyState()){
+        setTimeout(verify, 200);
+      }
+    });
+  });
+
+  function verify(){
+    if(!updateVerifyState()) return;
+    const entered = codeBoxes.map(b=>b.value).join('');
+
+    if(entered !== CORRECT_CODE){
+      authError.hidden = false;
+      codeBoxes.forEach(b=> b.classList.add('invalid'));
+      codeBoxesWrap.classList.remove('shake');
+      // restart the animation even if triggered twice in a row
+      void codeBoxesWrap.offsetWidth;
+      codeBoxesWrap.classList.add('shake');
+      codeBoxes.forEach(b=>{ b.value=''; b.classList.remove('filled'); });
+      btnVerify.disabled = true;
+      setTimeout(()=> codeBoxes[0].focus(), 120);
+      return;
+    }
+
+    clearInterval(resendInterval);
+
+    // show a brief loading step instead of snapping the app open instantly
+    stepCode.hidden = true;
+    stepLoading.hidden = false;
+    loadingBarFill.style.width = '0%';
+    loadingSub.textContent = 'Загружаем базы и точки продаж…';
+    requestAnimationFrame(()=> requestAnimationFrame(()=>{
+      loadingBarFill.style.width = '100%';
+    }));
+    setTimeout(()=>{
+      loadingSub.style.opacity = '0';
+      setTimeout(()=>{
+        loadingSub.textContent = 'Расставляем точки на карте…';
+        loadingSub.style.opacity = '1';
+      }, 200);
+    }, 850);
+
+    setTimeout(()=>{
+      overlay.classList.add('authOverlay-hide');
+      state.role = 'client';
+      appRoot.classList.remove('app-locked');
+      if(typeof applyMaintenanceView === 'function') applyMaintenanceView();
+      setTimeout(()=>{ overlay.setAttribute('hidden',''); }, 650);
+    }, 1750);
+  }
+  btnVerify.addEventListener('click', verify);
+})();
+
+/* ================= Ротация цитат вверху экрана приветствия ================= */
+(function(){
+  const el = document.getElementById('welcomeQuote');
+  if(!el) return;
+  const quotes = [
+    '«Дарите чувства — мы позаботимся о цветах.»',
+    '«Цветы говорят то, что порой трудно сказать словами.»',
+    '«Каждый букет — маленькая история о любви, заботе и красоте.»',
+    '«Цветы, которые говорят за вас.»',
+    '«Красивые моменты начинаются с цветов.»',
+    '«Собираем эмоции в букеты.»'
+  ];
+  let idx = 0;
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  setInterval(()=>{
+    idx = (idx + 1) % quotes.length;
+    if(reduceMotion){
+      el.textContent = quotes[idx];
+      return;
+    }
+    el.classList.add('fade');
+    setTimeout(()=>{
+      el.textContent = quotes[idx];
+      el.classList.remove('fade');
+    }, 620);
+  }, 4200);
+})();
+
+/* ================= Экран приветствия + загрузка (ромашка) ================= */
+(function(){
+  const welcomeOverlay = document.getElementById('welcomeOverlay');
+  const daisyOverlay = document.getElementById('daisyOverlay');
+  const authOverlay = document.getElementById('authOverlay');
+  const btnGoSite = document.getElementById('btnGoSite');
+  const daisyLabel = document.getElementById('daisyLabel');
+  if(!welcomeOverlay || !daisyOverlay || !btnGoSite) return;
+
+  const petals = Array.from(daisyOverlay.querySelectorAll('.petal'));
+  let launching = false;
+
+  function startDaisyLoading(){
+    petals.forEach(p=> p.classList.remove('is-falling'));
+    if(daisyLabel) daisyLabel.textContent = 'Загрузка сайта… 0%';
+    const total = petals.length;
+    const stepMs = 560;
+    petals.forEach((petal, i)=>{
+      setTimeout(()=>{
+        petal.classList.add('is-falling');
+        const pct = Math.round(((i+1)/total)*100);
+        if(daisyLabel) daisyLabel.textContent = 'Загрузка сайта… ' + pct + '%';
+      }, (i+1)*stepMs);
+    });
+    setTimeout(finishDaisyLoading, (total+1)*stepMs + 450);
+  }
+
+  function finishDaisyLoading(){
+    daisyOverlay.classList.add('daisyOverlay-hide');
+    setTimeout(()=>{
+      daisyOverlay.setAttribute('hidden','');
+      if(authOverlay) authOverlay.removeAttribute('hidden');
+    }, 520);
+  }
+
+  btnGoSite.addEventListener('click', ()=>{
+    if(launching) return;
+    launching = true;
+    welcomeOverlay.classList.add('welcomeOverlay-hide');
+    setTimeout(()=>{
+      welcomeOverlay.setAttribute('hidden','');
+      daisyOverlay.removeAttribute('hidden');
+      startDaisyLoading();
+    }, 520);
+  });
+})();
+
+/* ================= Вход для магазина (название + секретный код) ================= */
+(function(){
+  const overlay = document.getElementById('authOverlay');
+  const appRoot = document.getElementById('appRoot');
+  const welcomeOverlay = document.getElementById('welcomeOverlay');
+  const btnLoginShop = document.getElementById('btnLoginShop');
+  if(!btnLoginShop || !overlay) return;
+
+  const stepPhone = document.getElementById('stepPhone');
+  const stepBizName = document.getElementById('stepBizName');
+  const stepBizCode = document.getElementById('stepBizCode');
+  const stepLoading = document.getElementById('stepLoading');
+  const loadingBarFill = document.getElementById('loadingBarFill');
+  const loadingSub = document.getElementById('loadingSub');
+
+  const bizNameInput = document.getElementById('bizNameInput');
+  const btnBizNameNext = document.getElementById('btnBizNameNext');
+  const btnBizNameBack = document.getElementById('btnBizNameBack');
+  const bizNameEcho = document.getElementById('bizNameEcho');
+
+  const bizCodeBoxesWrap = document.getElementById('bizCodeBoxes');
+  const bizCodeBoxes = Array.from(bizCodeBoxesWrap.querySelectorAll('.codeDigit'));
+  const btnBizVerify = document.getElementById('btnBizVerify');
+  const btnBizCodeBack = document.getElementById('btnBizCodeBack');
+  const bizAuthError = document.getElementById('bizAuthError');
+
+  const BIZ_CODE = '555555';
+
+  btnLoginShop.addEventListener('click', ()=>{
+    if(welcomeOverlay){
+      welcomeOverlay.classList.add('welcomeOverlay-hide');
+      setTimeout(()=> welcomeOverlay.setAttribute('hidden',''), 520);
+    }
+    stepPhone.hidden = true;
+    stepBizName.hidden = false;
+    overlay.removeAttribute('hidden');
+    setTimeout(()=> bizNameInput.focus(), 260);
+  });
+
+  bizNameInput.addEventListener('input', ()=>{
+    btnBizNameNext.disabled = bizNameInput.value.trim().length < 2;
+  });
+  bizNameInput.addEventListener('keydown', (e)=>{
+    if(e.key==='Enter' && !btnBizNameNext.disabled) btnBizNameNext.click();
+  });
+
+  btnBizNameNext.addEventListener('click', ()=>{
+    if(btnBizNameNext.disabled) return;
+    bizNameEcho.textContent = bizNameInput.value.trim();
+    stepBizName.hidden = true;
+    stepBizCode.hidden = false;
+    bizCodeBoxes.forEach(b=>{ b.value=''; b.classList.remove('filled','invalid'); });
+    bizAuthError.hidden = true;
+    btnBizVerify.disabled = true;
+    setTimeout(()=> bizCodeBoxes[0].focus(), 260);
+  });
+
+  btnBizNameBack.addEventListener('click', ()=>{
+    overlay.classList.add('authOverlay-hide');
+    setTimeout(()=>{
+      overlay.setAttribute('hidden','');
+      overlay.classList.remove('authOverlay-hide');
+      stepBizName.hidden = true;
+      stepPhone.hidden = false;
+      if(welcomeOverlay){
+        welcomeOverlay.removeAttribute('hidden');
+        welcomeOverlay.classList.remove('welcomeOverlay-hide');
+      }
+    }, 520);
+  });
+
+  btnBizCodeBack.addEventListener('click', ()=>{
+    stepBizCode.hidden = true;
+    stepBizName.hidden = false;
+    setTimeout(()=> bizNameInput.focus(), 200);
+  });
+
+  function updateBizVerifyState(){
+    const filled = bizCodeBoxes.every(b => /^\d$/.test(b.value));
+    btnBizVerify.disabled = !filled;
+    return filled;
+  }
+
+  function hideBizError(){
+    bizAuthError.hidden = true;
+    bizCodeBoxes.forEach(b=> b.classList.remove('invalid'));
+  }
+
+  bizCodeBoxes.forEach((box, i)=>{
+    box.addEventListener('input', ()=>{
+      box.value = box.value.replace(/\D/g,'').slice(0,1);
+      box.classList.toggle('filled', box.value !== '');
+      hideBizError();
+      if(box.value && i < bizCodeBoxes.length-1){
+        bizCodeBoxes[i+1].focus();
+      }
+      if(updateBizVerifyState()){
+        setTimeout(verifyBiz, 200);
+      }
+    });
+    box.addEventListener('keydown', (e)=>{
+      if(e.key === 'Backspace' && !box.value && i > 0){
+        bizCodeBoxes[i-1].focus();
+      }
+    });
+    box.addEventListener('paste', (e)=>{
+      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'');
+      if(!text) return;
+      e.preventDefault();
+      hideBizError();
+      text.slice(0,6).split('').forEach((ch, idx)=>{
+        if(bizCodeBoxes[idx]){ bizCodeBoxes[idx].value = ch; bizCodeBoxes[idx].classList.add('filled'); }
+      });
+      const next = Math.min(text.length, bizCodeBoxes.length) - 1;
+      if(bizCodeBoxes[next]) bizCodeBoxes[next].focus();
+      if(updateBizVerifyState()){
+        setTimeout(verifyBiz, 200);
+      }
+    });
+  });
+
+  function verifyBiz(){
+    if(!updateBizVerifyState()) return;
+    const entered = bizCodeBoxes.map(b=>b.value).join('');
+
+    if(entered !== BIZ_CODE){
+      bizAuthError.hidden = false;
+      bizCodeBoxes.forEach(b=> b.classList.add('invalid'));
+      bizCodeBoxesWrap.classList.remove('shake');
+      void bizCodeBoxesWrap.offsetWidth;
+      bizCodeBoxesWrap.classList.add('shake');
+      bizCodeBoxes.forEach(b=>{ b.value=''; b.classList.remove('filled'); });
+      btnBizVerify.disabled = true;
+      setTimeout(()=> bizCodeBoxes[0].focus(), 120);
+      return;
+    }
+
+    stepBizCode.hidden = true;
+    stepLoading.hidden = false;
+    loadingBarFill.style.width = '0%';
+    loadingSub.textContent = 'Загружаем ваш магазин…';
+    requestAnimationFrame(()=> requestAnimationFrame(()=>{
+      loadingBarFill.style.width = '100%';
+    }));
+    setTimeout(()=>{
+      loadingSub.style.opacity = '0';
+      setTimeout(()=>{
+        loadingSub.textContent = 'Открываем карту точек…';
+        loadingSub.style.opacity = '1';
+      }, 200);
+    }, 850);
+
+    setTimeout(()=>{
+      overlay.classList.add('authOverlay-hide');
+      state.role = 'shop';
+      appRoot.classList.remove('app-locked');
+      if(typeof applyMaintenanceView === 'function') applyMaintenanceView();
+      setTimeout(()=>{ overlay.setAttribute('hidden',''); }, 650);
+    }, 1750);
+  }
+  btnBizVerify.addEventListener('click', verifyBiz);
+})();
+
+/* ================= Вход для разработчика (телефон + код SMS + секретный код) ================= */
+(function(){
+  const overlay = document.getElementById('authOverlay');
+  const appRoot = document.getElementById('appRoot');
+  const welcomeOverlay = document.getElementById('welcomeOverlay');
+  const btnLoginDev = document.getElementById('btnLoginDev');
+  if(!btnLoginDev || !overlay) return;
+
+  const stepPhone = document.getElementById('stepPhone');
+  const stepDevPhone = document.getElementById('stepDevPhone');
+  const stepDevCode = document.getElementById('stepDevCode');
+  const stepDevSecret = document.getElementById('stepDevSecret');
+  const stepLoading = document.getElementById('stepLoading');
+  const loadingBarFill = document.getElementById('loadingBarFill');
+  const loadingSub = document.getElementById('loadingSub');
+
+  const devPhoneInput = document.getElementById('devPhoneInput');
+  const btnDevSendCode = document.getElementById('btnDevSendCode');
+  const btnDevPhoneBack = document.getElementById('btnDevPhoneBack');
+  const devCodePhoneEcho = document.getElementById('devCodePhoneEcho');
+
+  const devCodeBoxesWrap = document.getElementById('devCodeBoxes');
+  const devCodeBoxes = Array.from(devCodeBoxesWrap.querySelectorAll('.codeDigit'));
+  const btnDevVerify = document.getElementById('btnDevVerify');
+  const btnDevCodeBack = document.getElementById('btnDevCodeBack');
+  const devAuthError = document.getElementById('devAuthError');
+
+  const devSecretBoxesWrap = document.getElementById('devSecretBoxes');
+  const devSecretBoxes = Array.from(devSecretBoxesWrap.querySelectorAll('.codeDigit'));
+  const btnDevSecretVerify = document.getElementById('btnDevSecretVerify');
+  const btnDevSecretBack = document.getElementById('btnDevSecretBack');
+  const devSecretError = document.getElementById('devSecretError');
+
+  const DEV_CODE = '666666';
+  const DEV_SECRET = '777777';
+
+  function formatPhone(d){
+    let out = '';
+    if(d.length > 0) out += '(' + d.slice(0,3);
+    if(d.length >= 3) out += ') ' + d.slice(3,6);
+    if(d.length >= 6) out += '-' + d.slice(6,8);
+    if(d.length >= 8) out += '-' + d.slice(8,10);
+    return out;
+  }
+
+  function closeToWelcome(){
+    overlay.classList.add('authOverlay-hide');
+    setTimeout(()=>{
+      overlay.setAttribute('hidden','');
+      overlay.classList.remove('authOverlay-hide');
+      stepDevPhone.hidden = true;
+      stepPhone.hidden = false;
+      if(welcomeOverlay){
+        welcomeOverlay.removeAttribute('hidden');
+        welcomeOverlay.classList.remove('welcomeOverlay-hide');
+      }
+    }, 520);
+  }
+
+  btnLoginDev.addEventListener('click', ()=>{
+    if(welcomeOverlay){
+      welcomeOverlay.classList.add('welcomeOverlay-hide');
+      setTimeout(()=> welcomeOverlay.setAttribute('hidden',''), 520);
+    }
+    stepPhone.hidden = true;
+    stepDevPhone.hidden = false;
+    overlay.removeAttribute('hidden');
+    setTimeout(()=> devPhoneInput.focus(), 260);
+  });
+
+  devPhoneInput.addEventListener('input', ()=>{
+    let digits = devPhoneInput.value.replace(/\D/g,'');
+    if(digits[0]==='7' || digits[0]==='8') digits = digits.slice(1);
+    digits = digits.slice(0,10);
+    devPhoneInput.value = formatPhone(digits);
+    devPhoneInput.dataset.digits = digits;
+    btnDevSendCode.disabled = digits.length !== 10;
+  });
+
+  btnDevSendCode.addEventListener('click', ()=>{
+    if(btnDevSendCode.disabled) return;
+    const digits = devPhoneInput.dataset.digits || '';
+    devCodePhoneEcho.textContent = '+7 ' + formatPhone(digits);
+    stepDevPhone.hidden = true;
+    stepDevCode.hidden = false;
+    devCodeBoxes.forEach(b=>{ b.value=''; b.classList.remove('filled','invalid'); });
+    devAuthError.hidden = true;
+    btnDevVerify.disabled = true;
+    setTimeout(()=> devCodeBoxes[0].focus(), 260);
+  });
+
+  btnDevPhoneBack.addEventListener('click', closeToWelcome);
+
+  btnDevCodeBack.addEventListener('click', ()=>{
+    stepDevCode.hidden = true;
+    stepDevPhone.hidden = false;
+    setTimeout(()=> devPhoneInput.focus(), 200);
+  });
+
+  function updateDevVerifyState(){
+    const filled = devCodeBoxes.every(b => /^\d$/.test(b.value));
+    btnDevVerify.disabled = !filled;
+    return filled;
+  }
+  function hideDevError(){
+    devAuthError.hidden = true;
+    devCodeBoxes.forEach(b=> b.classList.remove('invalid'));
+  }
+
+  devCodeBoxes.forEach((box, i)=>{
+    box.addEventListener('input', ()=>{
+      box.value = box.value.replace(/\D/g,'').slice(0,1);
+      box.classList.toggle('filled', box.value !== '');
+      hideDevError();
+      if(box.value && i < devCodeBoxes.length-1){
+        devCodeBoxes[i+1].focus();
+      }
+      if(updateDevVerifyState()){
+        setTimeout(verifyDevCode, 200);
+      }
+    });
+    box.addEventListener('keydown', (e)=>{
+      if(e.key === 'Backspace' && !box.value && i > 0){
+        devCodeBoxes[i-1].focus();
+      }
+    });
+    box.addEventListener('paste', (e)=>{
+      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'');
+      if(!text) return;
+      e.preventDefault();
+      hideDevError();
+      text.slice(0,6).split('').forEach((ch, idx)=>{
+        if(devCodeBoxes[idx]){ devCodeBoxes[idx].value = ch; devCodeBoxes[idx].classList.add('filled'); }
+      });
+      const next = Math.min(text.length, devCodeBoxes.length) - 1;
+      if(devCodeBoxes[next]) devCodeBoxes[next].focus();
+      if(updateDevVerifyState()){
+        setTimeout(verifyDevCode, 200);
+      }
+    });
+  });
+
+  function verifyDevCode(){
+    if(!updateDevVerifyState()) return;
+    const entered = devCodeBoxes.map(b=>b.value).join('');
+    if(entered !== DEV_CODE){
+      devAuthError.hidden = false;
+      devCodeBoxes.forEach(b=> b.classList.add('invalid'));
+      devCodeBoxesWrap.classList.remove('shake');
+      void devCodeBoxesWrap.offsetWidth;
+      devCodeBoxesWrap.classList.add('shake');
+      devCodeBoxes.forEach(b=>{ b.value=''; b.classList.remove('filled'); });
+      btnDevVerify.disabled = true;
+      setTimeout(()=> devCodeBoxes[0].focus(), 120);
+      return;
+    }
+    stepDevCode.hidden = true;
+    stepDevSecret.hidden = false;
+    devSecretBoxes.forEach(b=>{ b.value=''; b.classList.remove('filled','invalid'); });
+    devSecretError.hidden = true;
+    btnDevSecretVerify.disabled = true;
+    setTimeout(()=> devSecretBoxes[0].focus(), 260);
+  }
+  btnDevVerify.addEventListener('click', verifyDevCode);
+
+  btnDevSecretBack.addEventListener('click', ()=>{
+    stepDevSecret.hidden = true;
+    stepDevCode.hidden = false;
+    setTimeout(()=> devCodeBoxes[0].focus(), 200);
+  });
+
+  function updateDevSecretState(){
+    const filled = devSecretBoxes.every(b => /^\d$/.test(b.value));
+    btnDevSecretVerify.disabled = !filled;
+    return filled;
+  }
+  function hideDevSecretError(){
+    devSecretError.hidden = true;
+    devSecretBoxes.forEach(b=> b.classList.remove('invalid'));
+  }
+
+  devSecretBoxes.forEach((box, i)=>{
+    box.addEventListener('input', ()=>{
+      box.value = box.value.replace(/\D/g,'').slice(0,1);
+      box.classList.toggle('filled', box.value !== '');
+      hideDevSecretError();
+      if(box.value && i < devSecretBoxes.length-1){
+        devSecretBoxes[i+1].focus();
+      }
+      if(updateDevSecretState()){
+        setTimeout(verifyDevSecret, 200);
+      }
+    });
+    box.addEventListener('keydown', (e)=>{
+      if(e.key === 'Backspace' && !box.value && i > 0){
+        devSecretBoxes[i-1].focus();
+      }
+    });
+    box.addEventListener('paste', (e)=>{
+      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'');
+      if(!text) return;
+      e.preventDefault();
+      hideDevSecretError();
+      text.slice(0,6).split('').forEach((ch, idx)=>{
+        if(devSecretBoxes[idx]){ devSecretBoxes[idx].value = ch; devSecretBoxes[idx].classList.add('filled'); }
+      });
+      const next = Math.min(text.length, devSecretBoxes.length) - 1;
+      if(devSecretBoxes[next]) devSecretBoxes[next].focus();
+      if(updateDevSecretState()){
+        setTimeout(verifyDevSecret, 200);
+      }
+    });
+  });
+
+  function verifyDevSecret(){
+    if(!updateDevSecretState()) return;
+    const entered = devSecretBoxes.map(b=>b.value).join('');
+    if(entered !== DEV_SECRET){
+      devSecretError.hidden = false;
+      devSecretBoxes.forEach(b=> b.classList.add('invalid'));
+      devSecretBoxesWrap.classList.remove('shake');
+      void devSecretBoxesWrap.offsetWidth;
+      devSecretBoxesWrap.classList.add('shake');
+      devSecretBoxes.forEach(b=>{ b.value=''; b.classList.remove('filled'); });
+      btnDevSecretVerify.disabled = true;
+      setTimeout(()=> devSecretBoxes[0].focus(), 120);
+      return;
+    }
+
+    stepDevSecret.hidden = true;
+    stepLoading.hidden = false;
+    loadingBarFill.style.width = '0%';
+    loadingSub.textContent = 'Загружаем панель разработчика…';
+    requestAnimationFrame(()=> requestAnimationFrame(()=>{
+      loadingBarFill.style.width = '100%';
+    }));
+    setTimeout(()=>{
+      loadingSub.style.opacity = '0';
+      setTimeout(()=>{
+        loadingSub.textContent = 'Открываем карту точек…';
+        loadingSub.style.opacity = '1';
+      }, 200);
+    }, 850);
+
+    setTimeout(()=>{
+      overlay.classList.add('authOverlay-hide');
+      state.role = 'dev';
+      appRoot.classList.remove('app-locked');
+      if(typeof showAdminTools === 'function') showAdminTools();
+      if(typeof applyMaintenanceView === 'function') applyMaintenanceView();
+      setTimeout(()=>{ overlay.setAttribute('hidden',''); }, 650);
+    }, 1750);
+  }
+  btnDevSecretVerify.addEventListener('click', verifyDevSecret);
+})();
+</script>
+
+<script>
+const POINTS = [
+  {
+    id:1, type:'wholesale', x:34, y:33, lat:55.7602, lng:37.6386,
+    name:'База «Флорибус»', address:'ул. Складская, 14', phone:'+7 495 100-11-22',
+    hoursFrom:6, hoursTo:20,
+    delivery:'Новая партия по вторникам и пятницам',
+    photos:['Зал приёмки','Холодильные камеры','Ассортимент роз'],
+    price:[
+      {name:'Роза Эквадор 60см', unit:'шт', price:85, stock:'много'},
+      {name:'Роза Кения 50см', unit:'шт', price:62, stock:'много'},
+      {name:'Тюльпан', unit:'шт', price:45, stock:'много'},
+      {name:'Пион Coral Charm', unit:'шт', price:210, stock:'мало', low:true},
+      {name:'Эустома', unit:'шт', price:120, stock:'много'},
+      {name:'Гипсофила', unit:'пучок', price:350, stock:'много'},
+      {name:'Гвоздика кустовая', unit:'шт', price:38, stock:'много'},
+      {name:'Альстромерия', unit:'шт', price:55, stock:'много'},
+      {name:'Ранункулюс', unit:'шт', price:98, stock:'мало', low:true},
+    ],
+    reviews:[
+      {author:'Наталья, флорист', initials:'НФ', rating:5, date:'12 сентября', text:'Беру розы каждую неделю — стабильно свежие, упаковка аккуратная.'},
+      {author:'Артём', initials:'АР', rating:4, date:'2 сентября', text:'Хорошие цены на опт, но иногда нужно ждать партию пару часов.'},
+      {author:'Ольга', initials:'ОЛ', rating:5, date:'20 августа', text:'Пионы держатся отлично, буду брать ещё.'},
+    ]
+  },
+  {
+    id:2, type:'retail', x:52, y:16, lat:55.7658, lng:37.6079,
+    name:'«Ирис на Тверской»', address:'Тверская ул., 9', phone:'+7 495 200-33-44',
+    hoursFrom:9, hoursTo:21,
+    delivery:'',
+    photos:['Витрина','Зал','Оформление букетов'],
+    price:[
+      {name:'Роза Эквадор 60см', unit:'шт', price:140, stock:'много'},
+      {name:'Тюльпан', unit:'шт', price:80, stock:'много'},
+      {name:'Хризантема', unit:'шт', price:95, stock:'мало', low:true},
+      {name:'Эустома', unit:'шт', price:190, stock:'много'},
+      {name:'Лилия', unit:'шт', price:160, stock:'много'},
+      {name:'Гортензия', unit:'шт', price:230, stock:'мало', low:true},
+      {name:'Ирис', unit:'шт', price:110, stock:'много'},
+    ],
+    reviews:[
+      {author:'Мария', initials:'МК', rating:5, date:'15 сентября', text:'Красивая витрина, собрали букет за 10 минут, всё свежее.'},
+      {author:'Денис', initials:'ДС', rating:4, date:'1 сентября', text:'Дороговато для розницы, но качество на уровне.'},
+    ]
+  },
+  {
+    id:3, type:'wholesale', x:73, y:25, lat:55.7431, lng:37.6564,
+    name:'База «Эквадор Флора»', address:'Складской проезд, 3', phone:'+7 495 300-55-66',
+    hoursFrom:7, hoursTo:19,
+    delivery:'Свежий привоз ежедневно к 8:00',
+    photos:['Погрузка','Сортировка роз','Склад'],
+    price:[
+      {name:'Роза Эквадор 40см', unit:'шт', price:58, stock:'много'},
+      {name:'Роза Эквадор 70см', unit:'шт', price:110, stock:'много'},
+      {name:'Пион Sarah Bernhardt', unit:'шт', price:230, stock:'мало', low:true},
+      {name:'Гипсофила', unit:'пучок', price:320, stock:'много'},
+      {name:'Каллы', unit:'шт', price:135, stock:'много'},
+      {name:'Альстромерия', unit:'шт', price:52, stock:'много'},
+      {name:'Хризантема', unit:'шт', price:70, stock:'много'},
+    ],
+    reviews:[
+      {author:'Ирина, «Цветочный дом»', initials:'ИД', rating:5, date:'18 сентября', text:'Лучшие розы по соотношению цена/качество в этом районе.'},
+      {author:'Павел', initials:'ПГ', rating:3, date:'28 августа', text:'Раз столкнулся с пересортом, но быстро поменяли без вопросов.'},
+      {author:'Светлана', initials:'СВ', rating:5, date:'10 августа', text:'Работаем полгода, всегда вовремя и по заявленной цене.'},
+    ]
+  },
+  {
+    id:4, type:'retail', x:18, y:58, lat:55.7887, lng:37.6398,
+    name:'Цветы у метро «Маковый цвет»', address:'пр. Мира, 44', phone:'+7 495 400-77-88',
+    hoursFrom:8, hoursTo:22,
+    delivery:'',
+    photos:['Фасад','Витрина у входа','Готовые букеты'],
+    price:[
+      {name:'Тюльпан', unit:'шт', price:75, stock:'много'},
+      {name:'Роза Кения 50см', unit:'шт', price:120, stock:'много'},
+      {name:'Хризантема', unit:'шт', price:90, stock:'много'},
+      {name:'Гвоздика кустовая', unit:'шт', price:60, stock:'много'},
+      {name:'Ирис', unit:'шт', price:95, stock:'мало', low:true},
+    ],
+    reviews:[
+      {author:'Юлия', initials:'ЮБ', rating:4, date:'14 сентября', text:'Удобно, что работают допоздна, пригодилось перед поездом.'},
+      {author:'Роман', initials:'РТ', rating:5, date:'30 августа', text:'Всегда свежие тюльпаны, беру постоянно жене.'},
+    ]
+  },
+  {
+    id:5, type:'wholesale', x:67, y:70, lat:55.7000, lng:37.5300,
+    name:'Склад «Голландский дом»', address:'Логистическая ул., 8', phone:'+7 495 500-99-00',
+    hoursFrom:6, hoursTo:18,
+    delivery:'Партии из Нидерландов по средам',
+    photos:['Холодильный цех','Партия тюльпанов','Погрузочная зона'],
+    price:[
+      {name:'Тюльпан', unit:'шт', price:42, stock:'много'},
+      {name:'Гиацинт', unit:'шт', price:68, stock:'много'},
+      {name:'Роза Эквадор 60см', unit:'шт', price:88, stock:'мало', low:true},
+      {name:'Эустома', unit:'шт', price:115, stock:'много'},
+      {name:'Ранункулюс', unit:'шт', price:92, stock:'много'},
+      {name:'Гортензия', unit:'шт', price:210, stock:'мало', low:true},
+    ],
+    reviews:[
+      {author:'Костя, опт', initials:'КВ', rating:4, date:'11 сентября', text:'Голландские тюльпаны стабильно хорошего качества, цена честная.'},
+      {author:'Анна', initials:'АЛ', rating:4, date:'22 августа', text:'В среду лучше приезжать пораньше — к обеду разбирают самое свежее.'},
+    ]
+  },
+  {
+    id:6, type:'retail', x:40, y:78, lat:55.7290, lng:37.5990,
+    name:'«Пионы и Ко»', address:'Садовая ул., 21', phone:'+7 495 600-12-34',
+    hoursFrom:10, hoursTo:20,
+    delivery:'',
+    photos:['Пионовый зал','Прилавок','Упаковочный стол'],
+    price:[
+      {name:'Пион Coral Charm', unit:'шт', price:280, stock:'мало', low:true},
+      {name:'Пион Sarah Bernhardt', unit:'шт', price:300, stock:'мало', low:true},
+      {name:'Роза Эквадор 60см', unit:'шт', price:150, stock:'много'},
+      {name:'Гипсофила', unit:'пучок', price:420, stock:'много'},
+      {name:'Лилия', unit:'шт', price:175, stock:'много'},
+    ],
+    reviews:[
+      {author:'Виктория', initials:'ВП', rating:5, date:'16 сентября', text:'Специализация на пионах чувствуется — сорта на любой вкус.'},
+      {author:'Тимур', initials:'ТМ', rating:5, date:'5 сентября', text:'Собрали свадебный букет из пионов, гости были в восторге.'},
+      {author:'Екатерина', initials:'ЕК', rating:4, date:'19 августа', text:'Чуть выше цены, чем в среднем, но оправдано качеством.'},
+    ]
+  },
+];
+
+const BOUQUETS = [
+  {
+    id:1, pointId:2, name:'«Нежность»', price:3200, size:'25 стеблей', photo:'🌷',
+    composition:[
+      {name:'Роза Эквадор 60см', qty:'11 шт'},
+      {name:'Эустома', qty:'5 шт'},
+      {name:'Гипсофила', qty:'1 пучок'},
+      {name:'Эвкалипт (зелень)', qty:'3 ветки'},
+    ]
+  },
+  {
+    id:2, pointId:2, name:'«Городской шик»', price:4500, size:'31 стебель', photo:'💐',
+    composition:[
+      {name:'Роза Эквадор 60см', qty:'15 шт'},
+      {name:'Ирис', qty:'7 шт'},
+      {name:'Лилия', qty:'2 шт'},
+      {name:'Гортензия', qty:'1 шт'},
+      {name:'Зелень декоративная', qty:'4 ветки'},
+    ]
+  },
+  {
+    id:3, pointId:4, name:'«Полевой букет»', price:1900, size:'19 стеблей', photo:'🌼',
+    composition:[
+      {name:'Ромашка садовая', qty:'9 шт'},
+      {name:'Хризантема', qty:'5 шт'},
+      {name:'Гвоздика кустовая', qty:'4 шт'},
+      {name:'Зелень луговая', qty:'1 пучок'},
+    ]
+  },
+  {
+    id:4, pointId:4, name:'«Тюльпановый рассвет»', price:1500, size:'21 тюльпан', photo:'🌷',
+    composition:[
+      {name:'Тюльпан', qty:'21 шт'},
+      {name:'Гипсофила', qty:'1 пучок'},
+      {name:'Лента атласная', qty:'1 шт'},
+    ]
+  },
+  {
+    id:5, pointId:6, name:'«Пионовый сад»', price:5800, size:'15 пионов', photo:'🌸',
+    composition:[
+      {name:'Пион Coral Charm', qty:'8 шт'},
+      {name:'Пион Sarah Bernhardt', qty:'7 шт'},
+      {name:'Эвкалипт (зелень)', qty:'5 веток'},
+    ]
+  },
+  {
+    id:6, pointId:6, name:'«Свадебное настроение»', price:7200, size:'35 стеблей', photo:'💐',
+    composition:[
+      {name:'Пион Coral Charm', qty:'9 шт'},
+      {name:'Роза Эквадор 60см', qty:'14 шт'},
+      {name:'Гипсофила', qty:'2 пучка'},
+      {name:'Лизиантус', qty:'6 шт'},
+      {name:'Зелень декоративная', qty:'4 ветки'},
+    ]
+  },
+];
+
+const YANDEX_API_KEY = '9a2072e5-cf41-4fdc-a013-77a52933a3c4'; // ключ вставлен — карта включится там, где не блокируется CSP превью (см. баннер)
+
+/* ---------- Корзина: хранение между визитами (localStorage) ---------- */
+const CART_STORAGE_KEY = 'tsvetkarta_cart_v1';
+function loadCart(){
+  try{
+    const raw = localStorage.getItem(CART_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  }catch(e){ return []; }
+}
+function saveCart(){
+  try{ localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state.cart)); }catch(e){}
+}
+function cartTotalQty(){
+  return state.cart.reduce((s,c)=>s + c.qty, 0);
+}
+function updateCartBadge(){
+  const badge = document.getElementById('cartBadge');
+  if(!badge) return;
+  const qty = cartTotalQty();
+  badge.textContent = qty > 99 ? '99+' : String(qty);
+  badge.hidden = qty === 0;
+}
+function onCartChanged(){
+  saveCart();
+  updateCartBadge();
+  renderGlobalCart();
+  const activePoint = POINTS.find(x=>x.id===state.activeId);
+  if(activePoint) renderCart(activePoint);
+}
+
+const appRoot = document.getElementById('appRoot');
+const state = { activeId:null, activeBouquetId:null, cart: loadCart(), chat:{}, reviews:{}, activeTab:'overview', role:null };
+POINTS.forEach(p => { state.reviews[p.id] = [...p.reviews]; });
+
+const layout = document.getElementById('layout');
+function syncTopbarHeight(){
+  const tb = document.querySelector('.topbar');
+  if(tb) document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px');
+}
+syncTopbarHeight();
+window.addEventListener('resize', syncTopbarHeight);
+
+const pinsLayer = document.getElementById('pinsLayer');
+const pointListEl = document.getElementById('pointListEl');
+const pointCount = document.getElementById('pointCount');
+const detailInner = document.getElementById('detailInner');
+const bouquetsGrid = document.getElementById('bouquetsGrid');
+const searchInput = document.getElementById('searchInput');
+const flowerFilter = document.getElementById('flowerFilter');
+const openNowToggle = document.getElementById('openNowToggle');
+const typeChecks = document.querySelectorAll('[data-type]');
+
+function isOpenNow(p){
+  const h = new Date().getHours() + new Date().getMinutes()/60;
+  return h >= p.hoursFrom && h < p.hoursTo;
+}
+
+function matchesFilters(p){
+  const activeTypes = [...typeChecks].filter(c=>c.checked).map(c=>c.dataset.type);
+  if(!activeTypes.includes(p.type)) return false;
+  if(openNowToggle.checked && !isOpenNow(p)) return false;
+  const flower = flowerFilter.value;
+  if(flower && !p.price.some(i=>i.name.includes(flower))) return false;
+  const q = searchInput.value.trim().toLowerCase();
+  if(q){
+    const hay = (p.name + ' ' + p.price.map(i=>i.name).join(' ')).toLowerCase();
+    if(!hay.includes(q)) return false;
+  }
+  return true;
+}
+
+function iconFor(p){ return p.type==='wholesale' ? '📦' : '💐'; }
+
+const STAR_FILL = '<svg viewBox="0 0 20 20"><path class="star-fill" d="M10 1.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8L10 14.7l-5.2 2.8 1-5.8L1.6 7.6l5.8-.8z"/></svg>';
+const STAR_OFF  = '<svg viewBox="0 0 20 20"><path class="star-off" d="M10 1.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8L10 14.7l-5.2 2.8 1-5.8L1.6 7.6l5.8-.8z"/></svg>';
+
+function renderStars(value){
+  let out = '';
+  for(let i=1;i<=5;i++) out += (i<=Math.round(value)) ? STAR_FILL : STAR_OFF;
+  return `<span class="stars">${out}</span>`;
+}
+
+function avgRating(id){
+  const list = state.reviews[id];
+  if(!list.length) return 0;
+  return list.reduce((s,r)=>s+r.rating,0) / list.length;
+}
+
+let mapMode = 'fallback';
+let yandexMap = null;
+const yandexPlacemarks = {};
+
+const BUILDINGS = [
+  {left:30, top:10,    width:15, depth:15.7, height:120, color:'#241A38'},
+  {left:48, top:8.6,   width:12, depth:21.4, height:150, color:'#2C1E45'},
+  {left:64, top:12.9,  width:16, depth:15.7, height:90,  color:'#221732'},
+  {left:9,  top:37.1,  width:16, depth:17.1, height:110, color:'#2C1E45'},
+  {left:30, top:35.7,  width:14, depth:21.4, height:140, color:'#241A38'},
+  {left:48, top:35.7,  width:13, depth:12.9, height:100, color:'#221732'},
+  {left:65, top:37.1,  width:14, depth:20,   height:130, color:'#2C1E45'},
+  {left:13, top:60,    width:15, depth:17.1, height:95,  color:'#241A38'},
+  {left:33, top:57.1,  width:12, depth:21.4, height:160, color:'#2C1E45'},
+  {left:50, top:58.6,  width:15, depth:12.9, height:105, color:'#221732'},
+];
+
+function renderBuildings(){
+  const layer = document.getElementById('buildingsLayer');
+  layer.innerHTML = '';
+  const SLICES = 9;
+  BUILDINGS.forEach(b=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'building';
+    wrap.style.left = b.left + '%';
+    wrap.style.top = b.top + '%';
+    wrap.style.width = b.width + '%';
+    wrap.style.height = b.depth + '%';
+    for(let i=0;i<SLICES;i++){
+      const slice = document.createElement('div');
+      const t = i/(SLICES-1);
+      slice.className = 'b-slice' + (i===SLICES-1 ? ' top' : '');
+      slice.style.transform = 'translateZ(' + Math.round(t*b.height) + 'px)';
+      slice.style.background = shadeColor(b.color, t*0.35);
+      wrap.appendChild(slice);
+    }
+    layer.appendChild(wrap);
+  });
+}
+
+function shadeColor(hex, amt){
+  const n = parseInt(hex.slice(1),16);
+  const r = Math.min(255, (n>>16) + Math.round(255*amt));
+  const g = Math.min(255, ((n>>8)&0xff) + Math.round(255*amt));
+  const b = Math.min(255, (n&0xff) + Math.round(255*amt));
+  return 'rgb(' + r + ',' + g + ',' + b + ')';
+}
+
+function renderPins(){
+  if(mapMode === 'yandex'){
+    POINTS.forEach(p=>{
+      const pm = yandexPlacemarks[p.id];
+      if(!pm) return;
+      pm.options.set('visible', matchesFilters(p));
+      pm.options.set('iconColor', state.activeId===p.id ? '#EDE6FA' : (p.type==='wholesale' ? '#D9B8FF' : '#A85CF9'));
+    });
+    return;
+  }
+  pinsLayer.innerHTML = '';
+  POINTS.forEach((p,idx)=>{
+    const visible = matchesFilters(p);
+    const btn = document.createElement('button');
+    btn.className = 'pin ' + p.type + (visible?'':' hidden') + (state.activeId===p.id?' active':'');
+    btn.style.left = p.x + '%';
+    btn.style.top = p.y + '%';
+    btn.style.animationDelay = (idx*0.04) + 's';
+    btn.dataset.id = p.id;
+    btn.setAttribute('aria-label', p.name);
+    btn.innerHTML = `<span class="pin-badge"><span>${iconFor(p)}</span></span><span class="pin-label">${p.name}</span>`;
+    btn.addEventListener('click', ()=>openDetail(p.id));
+    pinsLayer.appendChild(btn);
+  });
+}
+
+function initYandexMap(){
+  try{
+    ymaps.ready(()=>{
+      const yEl = document.getElementById('yandexMap');
+      const sceneEl = document.getElementById('scene3d');
+      yEl.style.display = 'block';
+      document.getElementById('mapBanner').style.display = 'none';
+      document.querySelector('.zoomctrls').style.display = 'none';
+      document.getElementById('resetView').style.display = 'none';
+      document.querySelector('.maphint').style.display = 'none';
+      mapMode = 'yandex';
+      yandexMap = new ymaps.Map('yandexMap', {
+        center:[55.751244, 37.618423], zoom:11, controls:['zoomControl']
+      });
+      POINTS.forEach(p=>{
+        const pm = new ymaps.Placemark([p.lat, p.lng], {}, {
+          preset:'islands#circleIcon',
+          iconColor: p.type==='wholesale' ? '#D9B8FF' : '#A85CF9'
+        });
+        pm.events.add('click', (e)=>{ e.preventDefault(); openDetail(p.id); });
+        yandexMap.geoObjects.add(pm);
+        yandexPlacemarks[p.id] = pm;
+      });
+      renderPins();
+      sceneEl.style.opacity = '0';
+      requestAnimationFrame(()=>{ yEl.style.opacity = '1'; });
+      setTimeout(()=>{ sceneEl.style.display = 'none'; }, 420);
+    });
+  }catch(err){
+    console.warn('Не удалось инициализировать Яндекс.Карты, используется демо-карта', err);
+  }
+}
+
+if(YANDEX_API_KEY){
+  const script = document.createElement('script');
+  script.src = 'https://api-maps.yandex.ru/2.1/?apikey=' + encodeURIComponent(YANDEX_API_KEY) + '&lang=ru_RU';
+  script.onload = initYandexMap;
+  script.onerror = ()=> console.warn('Скрипт Яндекс.Карт не загрузился — остаёмся на демо-карте');
+  document.head.appendChild(script);
+}
+
+/* ---------- 3D view controls: zoom + drag orbit ---------- */
+const scene3d = document.getElementById('scene3d');
+const mapWrap = document.getElementById('mapWrap');
+const view3d = { tilt:55, spin:0, zoom:1 };
+
+function applyView3d(withTransition){
+  scene3d.classList.toggle('notransition', !withTransition);
+  scene3d.style.setProperty('--tilt', view3d.tilt + 'deg');
+  scene3d.style.setProperty('--spin', view3d.spin + 'deg');
+  scene3d.style.setProperty('--zoom', view3d.zoom);
+}
+applyView3d(false);
+
+function setZoom(next){
+  view3d.zoom = Math.min(2.4, Math.max(0.55, next));
+  applyView3d(true);
+}
+
+document.getElementById('zoomIn').addEventListener('click', ()=> setZoom(view3d.zoom + 0.2));
+document.getElementById('zoomOut').addEventListener('click', ()=> setZoom(view3d.zoom - 0.2));
+document.getElementById('resetView').addEventListener('click', ()=>{
+  view3d.tilt = 55; view3d.spin = 0; view3d.zoom = 1;
+  applyView3d(true);
+});
+
+mapWrap.addEventListener('wheel', (e)=>{
+  if(mapMode === 'yandex') return;
+  e.preventDefault();
+  setZoom(view3d.zoom - e.deltaY * 0.0012);
+}, {passive:false});
+
+let dragging = false, dragStartX = 0, dragStartY = 0, dragStartSpin = 0, dragStartTilt = 0;
+
+function dragStart(x, y){
+  if(mapMode === 'yandex') return;
+  dragging = true;
+  dragStartX = x; dragStartY = y;
+  dragStartSpin = view3d.spin; dragStartTilt = view3d.tilt;
+  mapWrap.classList.add('dragging');
+}
+function dragMove(x, y){
+  if(!dragging) return;
+  view3d.spin = dragStartSpin + (x - dragStartX) * 0.35;
+  view3d.tilt = Math.min(80, Math.max(25, dragStartTilt - (y - dragStartY) * 0.25));
+  applyView3d(false);
+}
+function dragEnd(){
+  dragging = false;
+  mapWrap.classList.remove('dragging');
+}
+
+mapWrap.addEventListener('mousedown', (e)=>{
+  if(e.target.closest('.pin') || e.target.closest('.zoomctrls') || e.target.closest('.resetview')) return;
+  dragStart(e.clientX, e.clientY);
+});
+window.addEventListener('mousemove', (e)=> dragMove(e.clientX, e.clientY));
+window.addEventListener('mouseup', dragEnd);
+
+mapWrap.addEventListener('touchstart', (e)=>{
+  if(e.target.closest('.pin') || e.target.closest('.zoomctrls') || e.target.closest('.resetview')) return;
+  if(e.touches.length === 1) dragStart(e.touches[0].clientX, e.touches[0].clientY);
+}, {passive:true});
+mapWrap.addEventListener('touchmove', (e)=>{
+  if(e.touches.length === 1) dragMove(e.touches[0].clientX, e.touches[0].clientY);
+}, {passive:true});
+mapWrap.addEventListener('touchend', dragEnd);
+
+renderBuildings();
+
+function renderList(){
+  const visible = POINTS.filter(matchesFilters);
+  pointCount.textContent = '(' + visible.length + ')';
+  pointListEl.innerHTML = '';
+  if(!visible.length){
+    pointListEl.innerHTML = '<div class="pcard-empty">Ничего не найдено под текущие фильтры.</div>';
+    return;
+  }
+  visible.forEach(p=>{
+    const card = document.createElement('button');
+    card.className = 'pcard' + (state.activeId===p.id?' active':'');
+    const openState = isOpenNow(p) ? '<span class="open">открыто</span>' : '<span class="closed">закрыто</span>';
+    const rating = avgRating(p.id);
+    card.innerHTML = `
+      <div class="pcard-top">
+        <span class="pcard-dot ${p.type}"></span>
+        <span class="pcard-name">${p.name}</span>
+      </div>
+      <div class="pcard-meta">${p.address} · ${openState} · ${rating.toFixed(1)} ★ (${state.reviews[p.id].length})</div>
+    `;
+    card.addEventListener('click', ()=>openDetail(p.id));
+    pointListEl.appendChild(card);
+  });
+}
+
+function seedChat(p){
+  if(state.chat[p.id]) return state.chat[p.id];
+  state.chat[p.id] = [
+    {from:'them', text: p.type==='wholesale'
+      ? 'Здравствуйте! Да, розы в наличии, подскажите нужный объём.'
+      : 'Добрый день! Чем можем помочь?'}
+  ];
+  return state.chat[p.id];
+}
+
+function renderDetail(p){
+  const openState = isOpenNow(p) ? '<span class="open">открыто сейчас</span>' : '<span class="closed">закрыто</span>';
+  const rating = avgRating(p.id);
+  const reviews = state.reviews[p.id];
+
+  detailInner.innerHTML = `
+    <div class="detail-kicker"><span class="dot ${p.type}"></span>${p.type==='wholesale'?'Оптовая база':'Розничный магазин'}</div>
+    <h3>${p.name}</h3>
+    <div class="detail-addr">${p.address}</div>
+    <div class="detail-hours">
+      ${renderStars(rating)} ${rating.toFixed(1)} · ${reviews.length} отзыв${reviews.length===1?'':'ов'} · ${openState}
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="overview" role="tab">Обзор</button>
+      <button class="tab" data-tab="reviews" role="tab">Отзывы</button>
+      <button class="tab" data-tab="price" role="tab">Прайс</button>
+    </div>
+
+    <div class="tabpanel active" data-panel="overview">
+      <div class="gallery">
+        <div class="ph p1"><span>${p.photos[0]}</span></div>
+        <div class="ph p2"><span>${p.photos[1]}</span></div>
+        <div class="ph p3"><span>${p.photos[2]}</span></div>
+      </div>
+      <div class="detail-hours">Часы работы: ${p.hoursFrom}:00–${p.hoursTo}:00 · ${openState}</div>
+      ${p.delivery ? `<div class="detail-delivery">${p.delivery}</div>` : ''}
+      <div class="quickactions">
+        <a class="btn-call" href="tel:${p.phone.replace(/[^\d+]/g,'')}">📞 ${p.phone}</a>
+        <button class="btn-chat" id="btnGoChat" type="button">💬 Написать в чат</button>
+      </div>
+    </div>
+
+    <div class="tabpanel" data-panel="reviews">
+      <div class="rating-summary">
+        <div class="rating-num">${rating.toFixed(1)}</div>
+        <div class="rating-side">${renderStars(rating)}<br>${reviews.length} отзыв${reviews.length===1?'':'ов'}</div>
+      </div>
+      <div id="reviewsList">
+        ${reviews.map(r=>`
+          <div class="review ${r.mine?'mine':''}">
+            <div class="review-top">
+              <div class="avatar">${r.initials}</div>
+              <div class="review-name">${r.author}</div>
+              ${renderStars(r.rating)}
+              <div class="review-date">${r.date}</div>
+            </div>
+            <div class="review-text">${r.text}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="addreview">
+        <h5>Оставить отзыв</h5>
+        <div class="starpicker" id="starPicker">
+          ${[1,2,3,4,5].map(n=>`<button type="button" data-star="${n}" aria-label="${n} звёзд">${STAR_OFF}</button>`).join('')}
+        </div>
+        <textarea id="reviewText" placeholder="Расскажите об опыте покупки..."></textarea>
+        <button class="btn-submit-review" id="btnSubmitReview" type="button">Опубликовать отзыв</button>
+        <div class="review-thanks" id="reviewThanks">Спасибо! Ваш отзыв опубликован.</div>
+      </div>
+    </div>
+
+    <div class="tabpanel" data-panel="price">
+      <table class="pricelist">
+        <thead><tr><th>Позиция</th><th></th><th class="price">Цена</th></tr></thead>
+        <tbody>
+          ${p.price.map(i=>`
+            <tr>
+              <td>${i.name}<div class="stock ${i.low?'low':''}">${i.stock}</div></td>
+              <td></td>
+              <td class="price">${i.price} ₽/${i.unit}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="order-row">
+        <select id="itemSelect">
+          ${p.price.map((i,idx)=>`<option value="${idx}">${i.name} — ${i.price} ₽/${i.unit}</option>`).join('')}
+        </select>
+        <div class="qty">
+          <button id="qtyMinus" type="button" aria-label="Уменьшить">–</button>
+          <input id="qtyInput" value="1" inputmode="numeric">
+          <button id="qtyPlus" type="button" aria-label="Увеличить">+</button>
+        </div>
+      </div>
+      <button class="btn-add" id="btnAdd" type="button">Добавить в заказ</button>
+
+      <div class="cart" id="cartBox"></div>
+      <div id="orderActionSlot"></div>
+      <div class="order-confirm" id="orderConfirm">Заявка отправлена продавцу. Он подтвердит наличие в чате.</div>
+
+      <h4 class="section-title">Чат с продавцом</h4>
+      <div class="chat" id="chatBox"></div>
+      <div class="chat-input">
+        <input id="chatInput" type="text" placeholder="Написать сообщение...">
+        <button id="chatSend" type="button" aria-label="Отправить">➤</button>
+      </div>
+    </div>
+  `;
+
+  renderCart(p);
+  renderChat(p);
+
+  detailInner.querySelectorAll('.tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const tab = btn.dataset.tab;
+      state.activeTab = tab;
+      detailInner.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b===btn));
+      detailInner.querySelectorAll('.tabpanel').forEach(pnl=>pnl.classList.toggle('active', pnl.dataset.panel===tab));
+    });
+  });
+  document.getElementById('btnGoChat').addEventListener('click', ()=>{
+    detailInner.querySelector('[data-tab="price"]').click();
+    setTimeout(()=>document.getElementById('chatInput')?.focus(), 50);
+  });
+
+  let selectedStar = 0;
+  const picker = document.getElementById('starPicker');
+  picker.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      selectedStar = parseInt(btn.dataset.star,10);
+      picker.querySelectorAll('button').forEach(b=>{
+        b.innerHTML = parseInt(b.dataset.star,10) <= selectedStar ? STAR_FILL : STAR_OFF;
+      });
+    });
+  });
+  document.getElementById('btnSubmitReview').addEventListener('click', ()=>{
+    const text = document.getElementById('reviewText').value.trim();
+    if(!selectedStar || !text) return;
+    state.reviews[p.id].unshift({
+      author:'Вы', initials:'Вы', rating:selectedStar, date:'сейчас', text, mine:true
+    });
+    renderDetail(p);
+    detailInner.querySelector('[data-tab="reviews"]').click();
+    document.getElementById('reviewThanks').classList.add('show');
+    renderPins(); renderList();
+  });
+
+  document.getElementById('qtyMinus').addEventListener('click', ()=>{
+    const inp = document.getElementById('qtyInput');
+    inp.value = Math.max(1, parseInt(inp.value||'1',10)-1);
+  });
+  document.getElementById('qtyPlus').addEventListener('click', ()=>{
+    const inp = document.getElementById('qtyInput');
+    inp.value = Math.max(1, parseInt(inp.value||'1',10)+1);
+  });
+  document.getElementById('btnAdd').addEventListener('click', ()=>{
+    const idx = parseInt(document.getElementById('itemSelect').value,10);
+    const qty = Math.max(1, parseInt(document.getElementById('qtyInput').value||'1',10));
+    const item = p.price[idx];
+    const existing = state.cart.find(c=>c.pointId===p.id && c.name===item.name);
+    if(existing) existing.qty += qty;
+    else state.cart.push({pointId:p.id, name:item.name, price:item.price, qty});
+    onCartChanged();
+  });
+  document.getElementById('chatSend').addEventListener('click', ()=>sendChat(p));
+  document.getElementById('chatInput').addEventListener('keydown', (e)=>{
+    if(e.key==='Enter') sendChat(p);
+  });
+}
+
+function renderCart(p){
+  const cart = state.cart.filter(c=>c.pointId===p.id);
+  const total = cart.reduce((s,c)=>s + c.price*c.qty, 0);
+  const cartBox = document.getElementById('cartBox');
+  const slot = document.getElementById('orderActionSlot');
+  if(!cartBox) return;
+  cartBox.innerHTML = `
+    ${cart.map(c=>`<div class="cart-item"><span>${c.qty} × ${c.name}</span><span>${c.qty*c.price} ₽</span></div>`).join('')}
+    ${cart.length ? `<div class="cart-total"><span>Итого</span><span>${total} ₽</span></div>` : ''}
+  `;
+  slot.innerHTML = cart.length ? `<button class="btn-order" id="btnOrder" type="button">Оформить заказ</button>` : '';
+  const orderBtn = document.getElementById('btnOrder');
+  if(orderBtn){
+    orderBtn.addEventListener('click', ()=>{
+      state.cart = state.cart.filter(c=>c.pointId!==p.id);
+      onCartChanged();
+      document.getElementById('orderConfirm').classList.add('show');
+    });
+  }
+}
+
+function renderChat(p){
+  const msgs = seedChat(p);
+  const box = document.getElementById('chatBox');
+  box.innerHTML = msgs.map(m=>`<div class="msg ${m.from==='me'?'me':'them'}">${m.text}</div>`).join('');
+  box.scrollTop = box.scrollHeight;
+}
+
+function sendChat(p){
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if(!text) return;
+  const msgs = seedChat(p);
+  msgs.push({from:'me', text});
+  input.value = '';
+  renderChat(p);
+  setTimeout(()=>{
+    msgs.push({from:'them', text:'Приняли, уточним и напишем в течение 10 минут.'});
+    renderChat(p);
+  }, 700);
+}
+
+function renderBouquets(){
+  bouquetsGrid.innerHTML = '';
+  BOUQUETS.forEach(bq=>{
+    const point = POINTS.find(x=>x.id===bq.pointId);
+    const card = document.createElement('div');
+    card.className = 'bqcard';
+    card.tabIndex = 0;
+    card.setAttribute('role','button');
+    card.setAttribute('aria-label', bq.name + ', ' + bq.price + ' ₽');
+    card.innerHTML = `
+      <div class="bq-photo">${bq.photo}</div>
+      <div class="bq-body">
+        <div class="bq-shop">${point ? point.name : ''}</div>
+        <div class="bq-name">${bq.name}</div>
+        <div class="bq-size">${bq.size}</div>
+        <div class="bq-price">${bq.price} ₽</div>
+        <button class="btn-bq-add" type="button">Добавить в корзину</button>
+      </div>
+    `;
+    const addBtn = card.querySelector('.btn-bq-add');
+    addBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      addBouquetToCart(bq);
+      addBtn.textContent = 'Добавлено ✓';
+      addBtn.classList.add('added');
+      clearTimeout(addBtn._resetTimer);
+      addBtn._resetTimer = setTimeout(()=>{
+        addBtn.textContent = 'Добавить в корзину';
+        addBtn.classList.remove('added');
+      }, 1400);
+    });
+    card.addEventListener('click', ()=> openBouquetDetail(bq.id));
+    card.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openBouquetDetail(bq.id); }
+    });
+    bouquetsGrid.appendChild(card);
+  });
+}
+
+function addBouquetToCart(bq){
+  const existing = state.cart.find(c=>c.pointId===bq.pointId && c.name===bq.name);
+  if(existing) existing.qty += 1;
+  else state.cart.push({pointId:bq.pointId, name:bq.name, price:bq.price, qty:1});
+  onCartChanged();
+}
+
+function renderBouquetDetail(bq, point){
+  detailInner.innerHTML = `
+    <div class="detail-kicker"><span class="dot retail"></span>Готовый букет</div>
+    <h3>${bq.name}</h3>
+    <div class="detail-addr">${point ? point.address : 'Адрес уточняется'}</div>
+
+    <div class="bq-hero-photo">${bq.photo}</div>
+    <div class="bq-detail-price">${bq.price} ₽ · ${bq.size}</div>
+
+    <div class="quickactions">
+      <a class="btn-call" href="tel:${point ? point.phone.replace(/[^\d+]/g,'') : ''}">📞 ${point ? point.phone : 'нет данных'}</a>
+      <button class="btn-chat" id="btnGoChatBq" type="button">💬 Написать в чат</button>
+    </div>
+
+    <h4 class="section-title">Состав композиции</h4>
+    <ul class="bq-composition">
+      ${bq.composition.map(c=>`<li><span>${c.name}</span><span>${c.qty}</span></li>`).join('')}
+    </ul>
+
+    <button class="btn-add" id="btnAddBqDetail" type="button">Добавить в корзину</button>
+    <div class="order-confirm" id="orderConfirmBq">Букет добавлен в корзину.</div>
+
+    <h4 class="section-title">Чат с продавцом</h4>
+    <div class="chat" id="chatBox"></div>
+    <div class="chat-input">
+      <input id="chatInput" type="text" placeholder="Написать сообщение...">
+      <button id="chatSend" type="button" aria-label="Отправить">➤</button>
+    </div>
+  `;
+
+  if(point){
+    renderChat(point);
+    document.getElementById('chatSend').addEventListener('click', ()=>sendChat(point));
+    document.getElementById('chatInput').addEventListener('keydown', (e)=>{
+      if(e.key==='Enter') sendChat(point);
+    });
+  }
+
+  document.getElementById('btnGoChatBq').addEventListener('click', ()=>{
+    document.getElementById('chatInput')?.focus();
+    document.querySelector('.chat-input')?.scrollIntoView({behavior:'smooth', block:'center'});
+  });
+
+  document.getElementById('btnAddBqDetail').addEventListener('click', ()=>{
+    addBouquetToCart(bq);
+    document.getElementById('orderConfirmBq').classList.add('show');
+  });
+}
+
+function openBouquetDetail(id){
+  const bq = BOUQUETS.find(x=>x.id===id);
+  if(!bq) return;
+  const point = POINTS.find(x=>x.id===bq.pointId);
+  state.activeBouquetId = id;
+  state.activeId = point ? point.id : null;
+  layout.classList.add('detail-open');
+  renderBouquetDetail(bq, point);
+  detailInner.scrollTop = 0;
+  renderPins();
+  renderList();
+  // on desktop the detail panel lives inside the first-screen layout row; if the
+  // bouquet was opened from further down the page, scroll back up so it's visible.
+  // (on narrow/mobile layouts .detail is a fixed full-screen overlay, so this isn't needed there)
+  if(window.innerWidth > 880 && window.scrollY > 4){
+    window.scrollTo({ top:0, behavior: reducedMotion() ? 'auto' : 'smooth' });
+  }
+}
+
+function reducedMotion(){
+  return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function openDetail(id){
+  state.activeId = id;
+  state.activeBouquetId = null;
+  const p = POINTS.find(x=>x.id===id);
+  layout.classList.add('detail-open');
+  renderDetail(p);
+  renderPins();
+  renderList();
+}
+
+function closeDetail(){
+  state.activeId = null;
+  state.activeBouquetId = null;
+  layout.classList.remove('detail-open');
+  renderPins();
+  renderList();
+}
+
+document.getElementById('detailClose').addEventListener('click', closeDetail);
+[searchInput, flowerFilter, openNowToggle, ...typeChecks].forEach(el=>{
+  el.addEventListener('input', ()=>{ renderPins(); renderList(); });
+});
+
+/* ---------- Общая корзина (шторка) ---------- */
+function renderGlobalCart(){
+  const listEl = document.getElementById('globalCartList');
+  const totalEl = document.getElementById('globalCartTotal');
+  const footerEl = document.getElementById('globalCartFooter');
+  if(!listEl) return;
+  if(!state.cart.length){
+    listEl.innerHTML = '<p class="cart-empty">Корзина пуста. Добавляйте букеты или товары из карточек точек на карте.</p>';
+    if(footerEl) footerEl.hidden = true;
+    return;
+  }
+  const groups = {};
+  state.cart.forEach(c=>{ (groups[c.pointId] = groups[c.pointId] || []).push(c); });
+  let html = '';
+  Object.keys(groups).forEach(pid=>{
+    const point = POINTS.find(x=> String(x.id)===String(pid));
+    html += `<div class="cart-group"><div class="cart-group-title">${point ? point.name : 'Точка'}</div>`;
+    groups[pid].forEach(c=>{
+      const safeName = c.name.replace(/"/g,'&quot;');
+      html += `
+        <div class="cart-item-global">
+          <div class="cart-item-info">
+            <span class="cart-item-name">${c.name}</span>
+            <span class="cart-item-price">${c.price} ₽ × ${c.qty}</span>
+          </div>
+          <div class="cart-item-controls">
+            <button type="button" class="cart-qty-btn" data-action="dec" data-pid="${c.pointId}" data-name="${safeName}" aria-label="Уменьшить">−</button>
+            <span class="cart-qty-val">${c.qty}</span>
+            <button type="button" class="cart-qty-btn" data-action="inc" data-pid="${c.pointId}" data-name="${safeName}" aria-label="Увеличить">+</button>
+            <button type="button" class="cart-remove-btn" data-action="remove" data-pid="${c.pointId}" data-name="${safeName}" aria-label="Удалить">✕</button>
+          </div>
+        </div>`;
+    });
+    html += `</div>`;
+  });
+  listEl.innerHTML = html;
+  const total = state.cart.reduce((s,c)=>s + c.price*c.qty, 0);
+  if(totalEl) totalEl.textContent = total + ' ₽';
+  if(footerEl) footerEl.hidden = false;
+
+  listEl.querySelectorAll('[data-action]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const pid = btn.dataset.pid;
+      const name = btn.dataset.name;
+      const item = state.cart.find(c=> String(c.pointId)===String(pid) && c.name===name);
+      if(!item) return;
+      const action = btn.dataset.action;
+      if(action==='inc') item.qty += 1;
+      else if(action==='dec'){ item.qty -= 1; if(item.qty<=0) state.cart = state.cart.filter(c=>c!==item); }
+      else if(action==='remove') state.cart = state.cart.filter(c=>c!==item);
+      onCartChanged();
+    });
+  });
+}
+
+function openSheet(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function closeSheet(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.classList.remove('show');
+  document.body.style.overflow = '';
+}
+document.querySelectorAll('.sheetOverlay').forEach(ov=>{
+  ov.addEventListener('click', (e)=>{ if(e.target===ov) closeSheet(ov.id); });
+});
+
+document.getElementById('fabCart').addEventListener('click', ()=>{
+  renderGlobalCart();
+  openSheet('cartSheet');
+});
+document.getElementById('cartSheetClose').addEventListener('click', ()=>closeSheet('cartSheet'));
+document.getElementById('globalCartCheckout').addEventListener('click', ()=>{
+  if(!state.cart.length) return;
+  state.cart = [];
+  onCartChanged();
+  const confirmEl = document.getElementById('globalCartConfirm');
+  confirmEl.classList.add('show');
+  setTimeout(()=>confirmEl.classList.remove('show'), 2600);
+});
+
+/* ---------- Поддержка (шторка-чат) ---------- */
+let supportMessages = [
+  {from:'them', text:'Здравствуйте! Это поддержка Цветкарты 🌿 Чем можем помочь?'}
+];
+function renderSupportChat(){
+  const box = document.getElementById('supportChatBox');
+  if(!box) return;
+  box.innerHTML = supportMessages.map(m=>`<div class="msg ${m.from==='me'?'me':'them'}">${m.text}</div>`).join('');
+  box.scrollTop = box.scrollHeight;
+}
+function sendSupportChat(){
+  const input = document.getElementById('supportChatInput');
+  const text = input.value.trim();
+  if(!text) return;
+  supportMessages.push({from:'me', text});
+  input.value = '';
+  renderSupportChat();
+  setTimeout(()=>{
+    supportMessages.push({from:'them', text:'Спасибо, приняли ваш вопрос! Ответим в ближайшее время.'});
+    renderSupportChat();
+  }, 700);
+}
+document.getElementById('fabSupport').addEventListener('click', ()=>{
+  renderSupportChat();
+  openSheet('supportSheet');
+});
+document.getElementById('supportSheetClose').addEventListener('click', ()=>closeSheet('supportSheet'));
+document.getElementById('supportChatSend').addEventListener('click', sendSupportChat);
+document.getElementById('supportChatInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') sendSupportChat(); });
+
+/* ================= Администратор: добавление магазинов ================= */
+function nextPointId(){
+  return POINTS.reduce((max,p)=> Math.max(max, p.id), 0) + 1;
+}
+
+const adminTools = document.getElementById('adminTools');
+const btnAddShop = document.getElementById('btnAddShop');
+const addShopError = document.getElementById('addShopError');
+const newShopName = document.getElementById('newShopName');
+const newShopType = document.getElementById('newShopType');
+const newShopAddress = document.getElementById('newShopAddress');
+const newShopPhone = document.getElementById('newShopPhone');
+const newShopFrom = document.getElementById('newShopFrom');
+const newShopTo = document.getElementById('newShopTo');
+
+btnAddShop.addEventListener('click', ()=>{
+  addShopError.hidden = true;
+  openSheet('addShopSheet');
+  setTimeout(()=> newShopName.focus(), 260);
+});
+document.getElementById('addShopClose').addEventListener('click', ()=>closeSheet('addShopSheet'));
+
+document.getElementById('btnAddShopSubmit').addEventListener('click', ()=>{
+  const name = newShopName.value.trim();
+  const address = newShopAddress.value.trim();
+  if(!name || !address){
+    addShopError.hidden = false;
+    return;
+  }
+  addShopError.hidden = true;
+
+  const id = nextPointId();
+  const newPoint = {
+    id,
+    type: newShopType.value,
+    x: 14 + Math.random()*72,
+    y: 14 + Math.random()*72,
+    lat: 55.751 + (Math.random()-0.5)*0.08,
+    lng: 37.618 + (Math.random()-0.5)*0.10,
+    name,
+    address,
+    phone: newShopPhone.value.trim(),
+    hoursFrom: Math.min(23, Math.max(0, parseInt(newShopFrom.value,10) || 0)),
+    hoursTo: Math.min(23, Math.max(0, parseInt(newShopTo.value,10) || 23)),
+    delivery: '',
+    photos: [],
+    price: [],
+    reviews: []
+  };
+  POINTS.push(newPoint);
+  state.reviews[id] = [];
+  renderPins();
+  renderList();
+
+  view3d.tilt = 55; view3d.spin = 0; view3d.zoom = 1;
+  applyView3d(true);
+
+  const newPinEl = pinsLayer.querySelector('.pin[data-id="' + id + '"]');
+  if(newPinEl){
+    newPinEl.classList.add('pin-new');
+    setTimeout(()=> newPinEl.classList.remove('pin-new'), 4300);
+  }
+
+  newShopName.value = '';
+  newShopAddress.value = '';
+  newShopPhone.value = '';
+  newShopFrom.value = '9';
+  newShopTo.value = '21';
+  newShopType.value = 'retail';
+  closeSheet('addShopSheet');
+});
+
+/* ================= Администратор: модерация готовых букетов ================= */
+let PENDING_BOUQUETS = [
+  { id:'pend1', pointId:2, name:'«Летний бриз»', price:2600, size:'17 стеблей', photo:'🌻',
+    composition:[
+      {name:'Подсолнух', qty:'5 шт'},
+      {name:'Ромашка садовая', qty:'7 шт'},
+      {name:'Зелень луговая', qty:'1 пучок'},
+    ] },
+  { id:'pend2', pointId:4, name:'«Розовый сад»', price:4100, size:'23 стебля', photo:'🌹',
+    composition:[
+      {name:'Роза Кения 50см', qty:'15 шт'},
+      {name:'Эустома', qty:'6 шт'},
+      {name:'Гипсофила', qty:'1 пучок'},
+    ] },
+];
+
+function nextBouquetId(){
+  return BOUQUETS.reduce((max,b)=> Math.max(max, b.id), 0) + 1;
+}
+
+function updateModerationBadge(){
+  const badge = document.getElementById('moderationBadge');
+  if(!badge) return;
+  const n = PENDING_BOUQUETS.length;
+  badge.textContent = n > 99 ? '99+' : String(n);
+  badge.hidden = n === 0;
+}
+
+function renderModerationList(){
+  const listEl = document.getElementById('moderationList');
+  if(!listEl) return;
+  if(!PENDING_BOUQUETS.length){
+    listEl.innerHTML = '<p class="cart-empty">Нет новых букетов на модерации.</p>';
+    return;
+  }
+  listEl.innerHTML = '';
+  PENDING_BOUQUETS.forEach(bq=>{
+    const point = POINTS.find(x=>x.id===bq.pointId);
+    const row = document.createElement('div');
+    row.className = 'mod-item';
+    row.innerHTML = `
+      <div class="mod-photo">${bq.photo}</div>
+      <div class="mod-body">
+        <div class="mod-shop">${point ? point.name : 'Неизвестная точка'}</div>
+        <div class="mod-name">${bq.name}</div>
+        <div class="mod-meta">${bq.size} · ${bq.price} ₽</div>
+        <div class="mod-actions">
+          <button type="button" class="mod-approve" data-action="approve">Опубликовать</button>
+          <button type="button" class="mod-reject" data-action="reject">Отклонить</button>
+        </div>
+      </div>
+    `;
+    row.querySelector('[data-action="approve"]').addEventListener('click', ()=>{
+      BOUQUETS.push({ id: nextBouquetId(), pointId: bq.pointId, name: bq.name, price: bq.price, size: bq.size, photo: bq.photo, composition: bq.composition });
+      PENDING_BOUQUETS = PENDING_BOUQUETS.filter(x=>x!==bq);
+      renderBouquets();
+      renderModerationList();
+      updateModerationBadge();
+    });
+    row.querySelector('[data-action="reject"]').addEventListener('click', ()=>{
+      PENDING_BOUQUETS = PENDING_BOUQUETS.filter(x=>x!==bq);
+      renderModerationList();
+      updateModerationBadge();
+    });
+    listEl.appendChild(row);
+  });
+}
+
+document.getElementById('btnModeration').addEventListener('click', ()=>{
+  renderModerationList();
+  openSheet('moderationSheet');
+});
+document.getElementById('moderationClose').addEventListener('click', ()=>closeSheet('moderationSheet'));
+
+/* ================= Администратор: режим тех. обслуживания ================= */
+const MAINT_KEY = 'tsvetkarta_maintenance';
+const maintenanceOverlay = document.getElementById('maintenanceOverlay');
+const btnMaintenance = document.getElementById('btnMaintenance');
+
+function isMaintenanceOn(){
+  try{ return localStorage.getItem(MAINT_KEY) === '1'; }catch(e){ return false; }
+}
+
+function applyMaintenanceView(){
+  const on = isMaintenanceOn();
+  const isAdmin = state.role === 'dev';
+  if(on && !isAdmin){
+    appRoot.classList.add('app-maintenance-blur');
+    maintenanceOverlay.removeAttribute('hidden');
+  } else {
+    appRoot.classList.remove('app-maintenance-blur');
+    maintenanceOverlay.setAttribute('hidden','');
+  }
+  if(btnMaintenance){
+    btnMaintenance.classList.toggle('is-active', on);
+    btnMaintenance.title = on ? 'Выключить тех. обслуживание' : 'Включить тех. обслуживание';
+  }
+}
+
+btnMaintenance.addEventListener('click', ()=>{
+  const on = isMaintenanceOn();
+  try{ localStorage.setItem(MAINT_KEY, on ? '0' : '1'); }catch(e){}
+  applyMaintenanceView();
+});
+
+window.addEventListener('storage', (e)=>{
+  if(e.key === MAINT_KEY) applyMaintenanceView();
+});
+
+function showAdminTools(){
+  if(adminTools) adminTools.removeAttribute('hidden');
+  updateModerationBadge();
+}
+
+updateCartBadge();
+
+renderPins();
+renderList();
+renderBouquets();
+</script>
+</body>
+</html>
